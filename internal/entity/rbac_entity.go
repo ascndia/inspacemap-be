@@ -33,7 +33,7 @@ type Role struct {
 	Name        string `gorm:"type:varchar(50);not null"`
 	Description string `gorm:"type:varchar(255)"`
 	IsSystem    bool   `gorm:"default:false"` 
-	Permissions []Permission `gorm:"many2many:role_permissions;"`
+	Permissions    []Permission `gorm:"many2many:role_permissions;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 type RolePermission struct {

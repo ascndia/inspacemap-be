@@ -68,6 +68,7 @@ type MediaAssetQuery struct {
 	MediaAssetFilter
 	Limit  *int    `json:"limit,omitempty"`
 	Offset *int    `json:"offset,omitempty"`
+	Sort   *string `json:"sort,omitempty"`
 }
 
 type MediaAssetQueryCursor struct {

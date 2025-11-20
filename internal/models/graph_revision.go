@@ -20,6 +20,7 @@ type QueryGraphRevision struct {
 	FilterGraphRevision
 	Limit  *int    `json:"limit,omitempty"`
 	Offset *int    `json:"offset,omitempty"`
+	Sort   *string `json:"sort,omitempty"`
 }
 
 type CursorGraphRevisionQuery struct {

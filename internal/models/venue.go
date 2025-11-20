@@ -69,6 +69,7 @@ type VenueQuery struct {
 	VenueFilter
 	Limit  *int `json:"limit,omitempty"`
 	Offset *int `json:"offset,omitempty"`
+	Sort   *string `json:"sort,omitempty"`
 }
 
 type VenueQueryCursor struct {

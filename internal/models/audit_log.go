@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-type AuditFilter struct {
+type AuditLogFilter struct {
 	OrganizationID string `json:"organization_id"`
 	Entity         string `json:"entity"`
 	EntityID       string `json:"entity_id"`
@@ -14,16 +14,17 @@ type AuditFilter struct {
 	IPAddress    string `json:"ip_address"`
 }
 
-type AuditQuery struct {
-	AuditFilter
+type AuditLogQuery struct {
+	AuditLogFilter
 	Limit  *int `json:"limit"`
 	Offset *int `json:"offset"`
+	Sort   *string `json:"sort"`
 }
 
-type AuditQueryCursor struct {
-	AuditFilter
+type AuditLogQueryCursor struct {
+	AuditLogFilter
 	Limit  *int    `json:"limit"`
-	Cursor *string `json:"cursor"`
+	Cursor *string `json:"cursor,omitempty"`
 }
 
 type AuditLogResponse struct {

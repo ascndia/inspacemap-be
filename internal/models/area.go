@@ -40,18 +40,20 @@ type AreaDetail struct {
 
 type AreaFilter struct {
 	OrganizationID *uuid.UUID `json:"organization_id,omitempty"`
+	VenueID      *uuid.UUID    `json:"venue_id,omitempty"`
+	FloorID     *uuid.UUID   `json:"floor_id,omitempty"`
 	Name        *string `json:"name,omitempty"`
 	Slug        *string `json:"slug,omitempty"`
 	Label 	 *string `json:"label,omitempty"`
 	Description *string `json:"description,omitempty"`
 	Category    *string `json:"category,omitempty"`
-	FloorID     *uint   `json:"floor_id,omitempty"`
 }
 
 type AreaQuery struct {
 	AreaFilter
 	Limit          *int       `json:"limit,omitempty"`
 	Offset         *int       `json:"offset,omitempty"`
+	Sort 		*string    `json:"sort,omitempty"`
 }
 
 type AreaQueryCursor struct {

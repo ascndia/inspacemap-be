@@ -9,8 +9,7 @@ type UserDetail struct {
 	Email          string       `json:"email"`
 	FullName       string       `json:"full_name"`
 	AvatarURL      string       `json:"avatar_url"`
-	Organization   OrgShortInfo `json:"organization"` 
-	Role           RoleDetail   `json:"role"` 
+	Organizations  []OrgMemberDetail `json:"organizations"`
 }
 
 type UserFilter struct {
@@ -18,6 +17,7 @@ type UserFilter struct {
 	Email          *string    `json:"email,omitempty"`
 	FullName       *string    `json:"full_name,omitempty"`
 	RoleID         *uint      `json:"role_id,omitempty"`
+	IsEmailVerified *bool      `json:"is_email_verified,omitempty"`
 }
 
 type UserQuery struct {

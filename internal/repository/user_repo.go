@@ -20,6 +20,21 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 	}
 }
 
+func (r *userRepo) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
+	var user entity.User
+	err := r.db.WithContext(ctx).
+		Preload("Memberships").
+		Preload("Memberships.Organization").
+		Preload("Memberships.Role").
+		Where("email = ?", email).
+		First(&user).Error
+	
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r *userRepo) GetByOrganizationID(ctx context.Context, orgID uuid.UUID) ([]entity.User, error) {
 	var users []entity.User
 	err := r.db.WithContext(ctx).

@@ -9,36 +9,21 @@ import (
 type UserRole string
 
 const (
-	AuthLocal  AuthProvider = "local"
-	AuthGoogle AuthProvider = "google"
-	AuthApple  AuthProvider = "apple"
-	AuthOIDC   AuthProvider = "oidc"
-	AuthSAML   AuthProvider = "saml"
-)
-
-const (
 	RoleOwner  UserRole = "owner"
 	RoleAdmin  UserRole = "admin"
 	RoleEditor UserRole = "editor"
 	RoleViewer UserRole = "viewer"
 )
 
-type AuthProvider string
-
 type User struct {
 	BaseEntity
-	FullName  string `gorm:"type:varchar(100)"`
-	Email     string `gorm:"type:varchar(100);uniqueIndex;not null"`
-	PasswordHash   string       `json:"-"` 
-	AuthProvider   AuthProvider `gorm:"type:varchar(20);default:'local'"` 
-	ProviderUserID string       `gorm:"type:varchar(100);index"`
-	SSOConfigID    *uuid.UUID       `gorm:"type:uuid;index"`
-	SSOConfig      *OrganizationSSO `gorm:"foreignKey:SSOConfigID"`
-	IsEmailVerified bool `gorm:"default:false"`
-	AvatarURL       string
+	Email        string `gorm:"type:varchar(255);uniqueIndex;not null"`
+	PasswordHash string `gorm:"type:varchar(255)"` // Nullable jika login via Google
+	FullName     string `gorm:"type:varchar(100)"`
+	AvatarURL    string `gorm:"type:text"`
+	IsEmailVerified bool   `gorm:"default:false"`
 	Memberships []OrganizationMember `gorm:"foreignKey:UserID"`
 }
-
 
 type UserInvitation struct {
 	BaseEntity

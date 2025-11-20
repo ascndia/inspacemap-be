@@ -9,13 +9,12 @@ type CreateRoleRequest struct {
 type RoleDetail struct {
 	ID          uint     `json:"id"`
 	Name        string   `json:"name"`
-	IsSystem    bool     `json:"is_system"`   // True = Admin/Viewer bawaan, False = Custom
-	Permissions []string `json:"permissions"` // List of Permission Keys e.g. ["venue:create"]
+	IsSystem    bool     `json:"is_system"`
+	Permissions []string `json:"permissions"`
 }
 
-// PermissionList: Untuk menampilkan checkbox di UI Admin saat bikin role baru
 type PermissionNode struct {
-	Group string           `json:"group"` // e.g. "CMS", "Billing"
+	Group string           `json:"group"`
 	Items []PermissionItem `json:"items"`
 }
 

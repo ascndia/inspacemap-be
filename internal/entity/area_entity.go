@@ -24,8 +24,8 @@ type Area struct {
 
 type AreaGalleryItem struct {
 	BaseEntity
-	AreaID       uuid.UUID  `gorm:"primaryKey;autoIncrement:false"`
-	MediaAssetID uuid.UUID  `gorm:"type:uuid;primaryKey;autoIncrement:false"`
+	AreaID       uuid.UUID  `gorm:"type:uuid;index:idx_area_media,unique;not null"`
+	MediaAssetID uuid.UUID  `gorm:"type:uuid;index:idx_area_media,unique;not null"`
 	SortOrder    int        `gorm:"default:0"`
 	Caption      string     `gorm:"type:varchar(255)"`
 	IsVisible    bool       `gorm:"default:true"`

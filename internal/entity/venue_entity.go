@@ -32,8 +32,8 @@ type Venue struct {
 
 type VenueGalleryItem struct {
 	BaseEntity
-	VenueID      uuid.UUID  `gorm:"type:uuid;primaryKey;autoIncrement:false"`
-	MediaAssetID uuid.UUID  `gorm:"type:uuid;primaryKey;autoIncrement:false"`
+	VenueID      uuid.UUID  `gorm:"type:uuid;index:idx_venue_media,unique;not null"`
+	MediaAssetID uuid.UUID  `gorm:"type:uuid;index:idx_venue_media,unique;not null"`
 	SortOrder    int        `gorm:"default:0"` 
 	Caption      string     `gorm:"type:varchar(255)"` 
 	IsVisible    bool       `gorm:"default:true"`
