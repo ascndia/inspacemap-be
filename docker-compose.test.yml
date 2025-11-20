@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  # 1. DATABASE SEMENTARA (ISOLATED)
+  db_test:
+    image: postgres:15-alpine
+    container_name: inspacemap_db_test
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpassword
+      POSTGRES_DB: inspacemap_test
+    # [OPTIMISASI] Gunakan RAM disk (tmpfs) agar testing super cepat
+    # Data tidak akan disimpan ke harddisk host, jadi aman & disposable.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d inspacemap_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  # 2. TEST RUNNER
+  tester:
+    image: golang:1.25-alpine
+    container_name: inspacemap_tester_runner
+    working_dir: /app
+    volumes:
+      - .:/app
+      # TAMBAHAN: Gunakan .env.test yang sudah disesuaikan untuk environment Docker
+      - ./.env.test:/app/.env
+
+      - go_modules:/go/pkg/mod
+      - go_build_cache:/root/.cache/go-build
+    depends_on:
+      db_test:
+        condition: service_healthy
+    environment:
+      # KONEK KE DB TEST (Bukan DB Dev)
+      - DB_HOST=db_test
+      - DB_PORT=5432
+      - DB_USER=testuser
+      - DB_PASSWORD=testpassword
+      - DB_NAME=inspacemap_test
+    # Perintah: Jalankan test, lalu exit
+    command: go test ./test/integration/... -v -count=1
+
+volumes:
+  go_modules:
+  go_build_cache:

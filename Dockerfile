@@ -1,5 +1,5 @@
 # --- Stage 1: Builder ---
-FROM golang:1.21-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 # Install git dan dependency dasar (diperlukan untuk fetch go modules tertentu)
 RUN apk add --no-cache git
