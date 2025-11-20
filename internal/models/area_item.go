@@ -2,12 +2,30 @@ package models
 
 import "github.com/google/uuid"
 
-type CreateAreaItemRequest struct {
+type AreaGalleryItemPayload struct {
+	MediaAssetID uuid.UUID `json:"media_asset_id" validate:"required"`
+	Caption      string    `json:"caption"`
+	SortOrder    int       `json:"sort_order"`
+	IsVisible    bool      `json:"is_visible"`
+	IsFeatured   bool      `json:"is_featured"` // Hanya dipakai di Venue, ignored di Area
+}
+
+type ReorderAreaGalleryRequest struct {
+	AreaID        uuid.UUID   `json:"area_id" validate:"required"`
+	MediaAssetIDs []uuid.UUID `json:"media_asset_ids" validate:"required"`
+}
+
+type AddAreaGalleryItemsRequest struct {
+	AreaID uuid.UUID                `json:"area_id" validate:"required"`
+	Items  []AreaGalleryItemPayload `json:"items" validate:"required,min=1"`
+}
+type UpdateAreaGalleryItemRequest struct {
 	AreaID       uuid.UUID `json:"area_id" validate:"required"`
 	MediaAssetID uuid.UUID `json:"media_asset_id" validate:"required"`
-	SortOrder    int       `json:"sort_order"`
-	Caption      string    `json:"caption"`
-	IsVisible    bool      `json:"is_visible"`
+	Caption      *string   `json:"caption,omitempty"`
+	IsVisible    *bool     `json:"is_visible,omitempty"`
+	SortOrder    *int      `json:"sort_order,omitempty"`
+	// Area tidak punya IsFeatured di Entity-nya
 }
 
 type AreaGalleryDetail struct {
@@ -16,6 +34,7 @@ type AreaGalleryDetail struct {
 	ThumbnailURL string    `json:"thumbnail_url"`
 	Caption      string    `json:"caption"`
 	SortOrder    int       `json:"sort_order"`
+	IsFeatured   bool      `json:"is_featured,omitempty"`
 }
 
 type AreaItemRequest struct {
@@ -26,7 +45,7 @@ type AreaItemRequest struct {
 
 type AreaGalleryFilter struct {
 	AreaID       *uuid.UUID `json:"area_id,omitempty"`
-	VenueID     *uuid.UUID `json:"venue_id,omitempty"`
+	VenueID      *uuid.UUID `json:"venue_id,omitempty"`
 	MediaAssetID *uuid.UUID `json:"media_asset_id,omitempty"`
 	SortOrder    *int       `json:"sort_order,omitempty"`
 	Caption      *string    `json:"caption,omitempty"`

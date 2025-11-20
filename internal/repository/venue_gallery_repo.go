@@ -18,8 +18,45 @@ type venueGalleryRepo struct {
 func NewVenueGalleryRepository(db *gorm.DB) VenueGalleryRepository {
 	return &venueGalleryRepo{
 		BaseRepository: NewBaseRepository[entity.VenueGalleryItem, uuid.UUID](db),
-		db: db,
+		db:             db,
 	}
+}
+
+func (r *venueGalleryRepo) AddVenueItems(ctx context.Context, items []entity.VenueGalleryItem) error {
+	return r.db.WithContext(ctx).
+		Clauses(clause.OnConflict{DoNothing: true}).
+		Create(&items).Error
+}
+
+func (r *venueGalleryRepo) UpdateVenueItem(ctx context.Context, item *entity.VenueGalleryItem) error {
+	return r.db.WithContext(ctx).Model(&entity.VenueGalleryItem{}).
+		Where("venue_id = ? AND media_asset_id = ?", item.VenueID, item.MediaAssetID).
+		Updates(map[string]interface{}{
+			"caption":     item.Caption,
+			"is_visible":  item.IsVisible,
+			"sort_order":  item.SortOrder,
+			"is_featured": item.IsFeatured,
+		}).Error
+}
+
+func (r *venueGalleryRepo) RemoveVenueItem(ctx context.Context, venueID, mediaID uuid.UUID) error {
+	return r.db.WithContext(ctx).
+		Where("venue_id = ? AND media_asset_id = ?", venueID, mediaID).
+		Delete(&entity.VenueGalleryItem{}).Error
+}
+
+func (r *venueGalleryRepo) ReorderVenueItems(ctx context.Context, venueID uuid.UUID, mediaIDs []uuid.UUID) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for i, mediaID := range mediaIDs {
+
+			if err := tx.Model(&entity.VenueGalleryItem{}).
+				Where("venue_id = ? AND media_asset_id = ?", venueID, mediaID).
+				Update("sort_order", i).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (r *venueGalleryRepo) GetByVenueID(ctx context.Context, venueID uuid.UUID) ([]entity.VenueGalleryItem, error) {
@@ -30,26 +67,6 @@ func (r *venueGalleryRepo) GetByVenueID(ctx context.Context, venueID uuid.UUID) 
 		Order("sort_order asc").
 		Find(&items).Error
 	return items, err
-}
-
-func (r *venueGalleryRepo) AddVenueItems(ctx context.Context, items []entity.VenueGalleryItem) error {
-	return r.db.WithContext(ctx).
-		Clauses(clause.OnConflict{DoNothing: true}).
-		Create(&items).Error
-}
-
-
-func (r *venueGalleryRepo) ReorderVenueItems(ctx context.Context, venueID uuid.UUID, mediaIDs []uuid.UUID) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		for i, mediaID := range mediaIDs {
-			if err := tx.Model(&entity.VenueGalleryItem{}).
-				Where("venue_id = ? AND media_asset_id = ?", venueID, mediaID).
-				Update("sort_order", i).Error; err != nil {
-				return err
-			}
-		}
-		return nil
-	})
 }
 
 func (r *venueGalleryRepo) FilterVenueGalleries(ctx context.Context, filter models.VenueGalleryFilter) ([]entity.VenueGalleryItem, error) {
@@ -120,12 +137,11 @@ func (r *venueGalleryRepo) CursorVenueGalleries(ctx context.Context, q models.Ve
 	return items, nextCursor, nil
 }
 
-// --- QUERY BUILDER ---
 func (r *venueGalleryRepo) buildFilterQuery(ctx context.Context, f models.VenueGalleryFilter) *gorm.DB {
 	db := r.db.WithContext(ctx).Model(&entity.VenueGalleryItem{})
 	if f.VenueID != nil {
 		db = db.Where("venue_id = ?", *f.VenueID)
-	} 
+	}
 	if f.MediaAssetID != nil {
 		db = db.Where("media_asset_id = ?", *f.MediaAssetID)
 	}

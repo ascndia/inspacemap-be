@@ -27,7 +27,7 @@ type AuthResponse struct {
 
 type InviteUserRequest struct {
 	Email  string `json:"email" validate:"required,email"`
-	RoleID uint   `json:"role_id" validate:"required"`
+	RoleID uuid.UUID `json:"role_id" validate:"required"`
 }
 
 type AcceptInviteRequest struct {

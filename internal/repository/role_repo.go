@@ -29,11 +29,26 @@ func (r *roleRepo) GetByName(ctx context.Context, name string) (*entity.Role, er
 	var role entity.Role
 	query := r.db.WithContext(ctx).Where("name = ?", name)
 
-
 	if err := query.First(&role).Error; err != nil {
 		return nil, err
 	}
 	return &role, nil
+}
+
+func (r *roleRepo) GetByOrganizationID(ctx context.Context, orgID *uuid.UUID) ([]entity.Role, error) {
+	var roles []entity.Role
+	query := r.db.WithContext(ctx)
+
+	if orgID != nil {
+		query = query.Where("organization_id = ?", *orgID)
+	} else {
+		query = query.Where("organization_id IS NULL")
+	}
+
+	if err := query.Find(&roles).Error; err != nil {
+		return nil, err
+	}
+	return roles, nil
 }
 
 func (r *roleRepo) GetByOrganizationIDAndName(ctx context.Context, orgID *uuid.UUID, name string) (*entity.Role, error) {
@@ -70,13 +85,13 @@ func (r *roleRepo) DetachPermission(ctx context.Context, roleID uuid.UUID, permI
 
 func (r *roleRepo) GetPermissions(ctx context.Context, roleID uuid.UUID) ([]entity.Permission, error) {
 	var permissions []entity.Permission
-	
+
 	// Join otomatis via GORM Association
 	// SELECT * FROM permissions JOIN role_permissions ON ...
 	err := r.db.WithContext(ctx).
 		Model(&entity.Role{BaseEntity: entity.BaseEntity{ID: roleID}}).
 		Association("Permissions").
 		Find(&permissions)
-		
+
 	return permissions, err
 }

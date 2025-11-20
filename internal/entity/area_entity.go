@@ -6,19 +6,21 @@ import (
 
 type Area struct {
 	BaseEntity
-	VenueID uuid.UUID `gorm:"index;not null"`
-	FloorID uuid.UUID `gorm:"index;not null"` 
-	Name        string `gorm:"type:varchar(100);not null"`
-	Slug        string `gorm:"type:varchar(100);index"`
-	Label	    string `gorm:"type:varchar(100)"`
-	Description string `gorm:"type:text"`
-	Latitude    float64 `gorm:"type:decimal(10,8)"` 
-	Longitude   float64 `gorm:"type:decimal(11,8)"`
-	MapX        float64 
-	MapY        float64
-	Category    string `gorm:"type:varchar(50);index"`
+	VenueID      uuid.UUID `gorm:"index;not null"`
+	Venue        Venue     `gorm:"foreignKey:VenueID"`
+	FloorID      uuid.UUID `gorm:"index;not null"`
+	Floor        Floor     `gorm:"foreignKey:FloorID"`
+	Name         string    `gorm:"type:varchar(100);not null"`
+	Slug         string    `gorm:"type:varchar(100);index"`
+	Label        string    `gorm:"type:varchar(100)"`
+	Description  string    `gorm:"type:text"`
+	Latitude     float64   `gorm:"type:decimal(10,8)"`
+	Longitude    float64   `gorm:"type:decimal(11,8)"`
+	MapX         float64
+	MapY         float64
+	Category     string `gorm:"type:varchar(50);index"`
 	CoverImageID *uuid.UUID
-	CoverImage   *MediaAsset `gorm:"foreignKey:CoverImageID"`
+	CoverImage   *MediaAsset       `gorm:"foreignKey:CoverImageID"`
 	Gallery      []AreaGalleryItem `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
@@ -32,5 +34,3 @@ type AreaGalleryItem struct {
 	Area         Area       `gorm:"foreignKey:AreaID"`
 	MediaAsset   MediaAsset `gorm:"foreignKey:MediaAssetID"`
 }
-
-

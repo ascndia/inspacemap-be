@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type areaGalleryRepo struct {
@@ -21,8 +22,40 @@ func NewAreaGalleryRepository(db *gorm.DB) AreaGalleryRepository {
 	}
 }
 
-// 1. Getters Helper
+func (r *areaGalleryRepo) AddAreaItems(ctx context.Context, items []entity.AreaGalleryItem) error {
+	return r.db.WithContext(ctx).
+		Clauses(clause.OnConflict{DoNothing: true}).
+		Create(&items).Error
+}
 
+func (r *areaGalleryRepo) UpdateAreaItem(ctx context.Context, item *entity.AreaGalleryItem) error {
+	return r.db.WithContext(ctx).Model(&entity.AreaGalleryItem{}).
+		Where("area_id = ? AND media_asset_id = ?", item.AreaID, item.MediaAssetID).
+		Updates(map[string]interface{}{
+			"caption":    item.Caption,
+			"is_visible": item.IsVisible,
+			"sort_order": item.SortOrder,
+		}).Error
+}
+
+func (r *areaGalleryRepo) RemoveAreaItem(ctx context.Context, areaID, mediaID uuid.UUID) error {
+	return r.db.WithContext(ctx).
+		Where("area_id = ? AND media_asset_id = ?", areaID, mediaID).
+		Delete(&entity.AreaGalleryItem{}).Error
+}
+
+func (r *areaGalleryRepo) ReorderAreaItems(ctx context.Context, areaID uuid.UUID, mediaIDs []uuid.UUID) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for i, mediaID := range mediaIDs {
+			if err := tx.Model(&entity.AreaGalleryItem{}).
+				Where("area_id = ? AND media_asset_id = ?", areaID, mediaID).
+				Update("sort_order", i).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
 func (r *areaGalleryRepo) GetByAreaID(ctx context.Context, areaID uuid.UUID) ([]entity.AreaGalleryItem, error) {
 	var items []entity.AreaGalleryItem
 	err := r.db.WithContext(ctx).
@@ -146,7 +179,7 @@ func (r *areaGalleryRepo) buildFilterQuery(ctx context.Context, f models.AreaGal
 	if f.IsFeatured != nil {
 		db = db.Where("is_featured = ?", *f.IsFeatured)
 	}
-	
+
 	if f.SortOrder != nil {
 		db = db.Where("sort_order = ?", *f.SortOrder)
 	}

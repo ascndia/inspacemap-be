@@ -21,22 +21,22 @@ const (
 
 type Permission struct {
 	BaseEntity
-	Key         PermissionKey `gorm:"type:varchar(50);uniqueIndex;not null"` // e.g. "venue:create"
-	Description string        `gorm:"type:varchar(255)"`                     // e.g. "Allows creating new venues"
-	Group       string        `gorm:"type:varchar(50)"`                      // e.g. "CMS", "Graph", "Billing"
+	Key         string `gorm:"type:varchar(50);uniqueIndex;not null"` // e.g. "venue:create"
+	Description string `gorm:"type:varchar(255)"`                     // e.g. "Allows creating new venues"
+	Group       string `gorm:"type:varchar(50)"`                      // e.g. "CMS", "Graph", "Billing"
 }
 
 type Role struct {
 	BaseEntity
-	OrganizationID *uuid.UUID `gorm:"index"`
+	OrganizationID *uuid.UUID    `gorm:"index"`
 	Organization   *Organization `gorm:"foreignKey:OrganizationID"`
-	Name        string `gorm:"type:varchar(50);not null"`
-	Description string `gorm:"type:varchar(255)"`
-	IsSystem    bool   `gorm:"default:false"` 
-	Permissions    []Permission `gorm:"many2many:role_permissions;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Name           string        `gorm:"type:varchar(50);not null"`
+	Description    string        `gorm:"type:varchar(255)"`
+	IsSystem       bool          `gorm:"default:false"`
+	Permissions    []Permission  `gorm:"many2many:role_permissions;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 type RolePermission struct {
-	RoleID			uuid.UUID `gorm:"primaryKey"`
-	PermissionID 	uuid.UUID `gorm:"primaryKey"`
+	RoleID       uuid.UUID `gorm:"primaryKey"`
+	PermissionID uuid.UUID `gorm:"primaryKey"`
 }

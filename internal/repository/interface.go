@@ -29,7 +29,7 @@ type OrganizationRepository interface {
 	GetByDomain(ctx context.Context, domain string) (*entity.Organization, error)
 	FilterOrganizations(ctx context.Context, filter models.OrganizationFilter) ([]entity.Organization, error)
 	PagedOrganizations(ctx context.Context, query models.OrganizationQuery) ([]entity.Organization, int64, error)
-	CursorOrganizations(ctx context.Context, query models.OrganizationQueryCursor) ([]entity.Organization,  string, error)
+	CursorOrganizations(ctx context.Context, query models.OrganizationQueryCursor) ([]entity.Organization, string, error)
 }
 
 type OrganizationMemberRepository interface {
@@ -55,19 +55,15 @@ type UserInvitationRepository interface {
 
 type RoleRepository interface {
 	BaseRepository[entity.Role, uuid.UUID]
-    GetByName(ctx context.Context, name string) (*entity.Role, error)
-	GetByOrganizationIDAndName(ctx context.Context, orgID *uuid.UUID, name string) (*entity.Role, error)
-    AttachPermission(ctx context.Context, roleID uuid.UUID, permID uuid.UUID) error
-    DetachPermission(ctx context.Context, roleID uuid.UUID, permID uuid.UUID) error
-    GetPermissions(ctx context.Context, roleID uuid.UUID) ([]entity.Permission, error)
+	GetByName(ctx context.Context, name string) (*entity.Role, error)
+	GetAll(ctx context.Context) ([]entity.Role, error) // List untuk dropdown di frontend
+	GetPermissions(ctx context.Context, roleID uuid.UUID) ([]entity.Permission, error)
 }
 
 type PermissionRepository interface {
 	BaseRepository[entity.Permission, uuid.UUID]
-	GetByKey(ctx context.Context, key string) (*entity.Permission, error)
-	GetByRoleID(ctx context.Context, roleID uuid.UUID) ([]entity.Permission, error)
+	GetByUserAndOrg(ctx context.Context, userID, orgID uuid.UUID) ([]entity.Permission, error)
 }
-
 type AuthRepository interface {
 	FindUserByEmail(ctx context.Context, email string) (*entity.User, error)
 	ValidateAPIKey(ctx context.Context, keyHash string) (*entity.ApiKey, error)
@@ -75,8 +71,10 @@ type AuthRepository interface {
 
 type VenueRepository interface {
 	BaseRepository[entity.Venue, uuid.UUID]
+	GetBySlug(ctx context.Context, slug string) (*entity.Venue, error)
 	GetByOrganizationID(ctx context.Context, orgID uuid.UUID) ([]entity.Venue, error)
-    FilterVenues(ctx context.Context, filter models.VenueFilter) ([]entity.Venue, error)
+	GetLiveManifestData(venueSlug string) (*entity.Venue, error)
+	FilterVenues(ctx context.Context, filter models.VenueFilter) ([]entity.Venue, error)
 	PagedVenues(ctx context.Context, query models.VenueQuery) ([]entity.Venue, int64, error)
 	CursorVenues(ctx context.Context, query models.VenueQueryCursor) ([]entity.Venue, string, error)
 }
@@ -84,6 +82,10 @@ type VenueRepository interface {
 type VenueGalleryRepository interface {
 	BaseRepository[entity.VenueGalleryItem, uuid.UUID]
 	GetByVenueID(ctx context.Context, venueID uuid.UUID) ([]entity.VenueGalleryItem, error)
+	AddVenueItems(ctx context.Context, items []entity.VenueGalleryItem) error
+	UpdateVenueItem(ctx context.Context, item *entity.VenueGalleryItem) error
+	RemoveVenueItem(ctx context.Context, venueID, mediaID uuid.UUID) error
+	ReorderVenueItems(ctx context.Context, venueID uuid.UUID, mediaIDs []uuid.UUID) error
 	FilterVenueGalleries(ctx context.Context, filter models.VenueGalleryFilter) ([]entity.VenueGalleryItem, error)
 	PagedVenueGalleries(ctx context.Context, query models.VenueGalleryQuery) ([]entity.VenueGalleryItem, int64, error)
 	CursorVenueGalleries(ctx context.Context, query models.VenueGalleryCursor) ([]entity.VenueGalleryItem, string, error)
@@ -99,12 +101,13 @@ type GraphRepository interface {
 
 type GraphRevisionRepository interface {
 	BaseRepository[entity.GraphRevision, uuid.UUID]
+	CreateDraft(ctx context.Context, venueID uuid.UUID) (*entity.GraphRevision, error)
 	PublishDraft(ctx context.Context, revisionID uuid.UUID, note string) error
 	GetDraftByFloorID(ctx context.Context, floorID uuid.UUID) (*entity.GraphRevision, error)
-	GetDraftByVenueID(ctx context.Context, venueID uuid.UUID) ([]entity.GraphRevision, error)
+	GetDraftByVenueID(ctx context.Context, venueID uuid.UUID) (*entity.GraphRevision, error)
 	GetDraftByOrganizationID(ctx context.Context, orgID uuid.UUID) ([]entity.GraphRevision, error)
 	GetLiveByFloorID(ctx context.Context, floorID uuid.UUID) (*entity.GraphRevision, error)
-	GetLiveByVenueID(ctx context.Context, venueID uuid.UUID) ([]entity.GraphRevision, error)
+	GetLiveByVenueID(ctx context.Context, venueID uuid.UUID) (*entity.GraphRevision, error)
 	GetLiveByOrganizationID(ctx context.Context, orgID uuid.UUID) ([]entity.GraphRevision, error)
 
 	GetByVenueID(ctx context.Context, venueID uuid.UUID) ([]entity.GraphRevision, error)
@@ -129,6 +132,10 @@ type AreaGalleryRepository interface {
 	BaseRepository[entity.AreaGalleryItem, uuid.UUID]
 	GetByAreaID(ctx context.Context, areaID uuid.UUID) ([]entity.AreaGalleryItem, error)
 	GetByVenueID(ctx context.Context, venueID uuid.UUID) ([]entity.AreaGalleryItem, error)
+	AddAreaItems(ctx context.Context, items []entity.AreaGalleryItem) error
+	UpdateAreaItem(ctx context.Context, item *entity.AreaGalleryItem) error
+	RemoveAreaItem(ctx context.Context, areaID, mediaID uuid.UUID) error
+	ReorderAreaItems(ctx context.Context, areaID uuid.UUID, mediaIDs []uuid.UUID) error
 	FilterAreaGalleries(ctx context.Context, filter models.AreaGalleryFilter) ([]entity.AreaGalleryItem, error)
 	PagedAreaGalleries(ctx context.Context, query models.AreaGalleryQuery) ([]entity.AreaGalleryItem, int64, error)
 	CursorAreaGalleries(ctx context.Context, query models.AreaGalleryCursor) ([]entity.AreaGalleryItem, string, error)

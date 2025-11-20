@@ -10,7 +10,6 @@ import (
 	"gorm.io/gorm"
 )
 
-
 type venueRepo struct {
 	BaseRepository[entity.Venue, uuid.UUID]
 	db *gorm.DB
@@ -21,6 +20,28 @@ func NewVenueRepository(db *gorm.DB) VenueRepository {
 		BaseRepository: NewBaseRepository[entity.Venue, uuid.UUID](db),
 		db:             db,
 	}
+}
+
+func (r *venueRepo) GetByID(ctx context.Context, id uuid.UUID) (*entity.Venue, error) {
+	var venue entity.Venue
+	err := r.db.WithContext(ctx).
+		Preload("CoverImage").
+		Preload("Gallery.MediaAsset").
+		Preload("PointsOfInterest"). // Load Area/POI
+		Where("id = ?", id).
+		First(&venue).Error
+	return &venue, err
+}
+
+func (r *venueRepo) GetBySlug(ctx context.Context, slug string) (*entity.Venue, error) {
+	var venue entity.Venue
+	err := r.db.WithContext(ctx).
+		Preload("CoverImage").
+		Preload("Gallery.MediaAsset").
+		Preload("PointsOfInterest").
+		Where("slug = ?", slug).
+		First(&venue).Error
+	return &venue, err
 }
 
 func (r *venueRepo) GetByOrganizationID(ctx context.Context, orgID uuid.UUID) ([]entity.Venue, error) {
