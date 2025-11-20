@@ -28,10 +28,9 @@ func (r *roleRepo) GetByName(ctx context.Context, name string) (*entity.Role, er
 	return &role, nil
 }
 
-// GetAll: Dipakai untuk dropdown "Pilih Jabatan" saat Invite Member
 func (r *roleRepo) GetAll(ctx context.Context) ([]entity.Role, error) {
 	var roles []entity.Role
-	// Preload permissions tidak wajib untuk list dropdown, tapi berguna untuk debug
+
 	err := r.db.WithContext(ctx).Order("name asc").Find(&roles).Error
 	return roles, err
 }
@@ -57,7 +56,12 @@ func NewPermissionRepository(db *gorm.DB) PermissionRepository {
 	}
 }
 
-// GetByUserAndOrg: Method KUNCI untuk Middleware RBAC
+func (r *permissionRepo) GetAll(ctx context.Context) ([]entity.Permission, error) {
+	var perms []entity.Permission
+	err := r.db.WithContext(ctx).Find(&perms).Error
+	return perms, err
+}
+
 func (r *permissionRepo) GetByUserAndOrg(ctx context.Context, userID, orgID uuid.UUID) ([]entity.Permission, error) {
 	var perms []entity.Permission
 	err := r.db.WithContext(ctx).

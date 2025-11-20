@@ -10,44 +10,59 @@ import (
 )
 
 type AreaGalleryHandler struct {
-	service service.AreaService
+	service service.AreaGalleryService
 }
 
-func NewAreaGalleryHandler(s service.AreaService) *AreaGalleryHandler {
+func NewAreaGalleryHandler(s service.AreaGalleryService) *AreaGalleryHandler {
 	return &AreaGalleryHandler{service: s}
 }
 
-// POST /api/v1/areas
-func (h *AreaGalleryHandler) CreateArea(c *fiber.Ctx) error {
-	var req models.CreateAreaRequest
+// POST /gallery/area
+func (h *AreaGalleryHandler) AddItems(c *fiber.Ctx) error {
+	var req models.AddAreaGalleryItemsRequest
 	if err := c.BodyParser(&req); err != nil {
 		return utils.SendError(c, 400, "Invalid JSON")
 	}
-	resp, err := h.service.CreateArea(c.Context(), req)
-	if err != nil {
+
+	if err := h.service.AddGalleryItems(c.Context(), req); err != nil {
 		return utils.SendError(c, 500, err.Error())
 	}
-	return utils.SendCreated(c, resp)
+	return utils.SendSuccess(c, "Items added to area gallery")
 }
 
-// GET /api/v1/areas/:id
-func (h *AreaGalleryHandler) GetDetail(c *fiber.Ctx) error {
-	id, _ := uuid.Parse(c.Params("id"))
-	resp, err := h.service.GetAreaDetail(c.Context(), id)
-	if err != nil {
-		return utils.SendError(c, 404, "Area not found")
+// PUT /gallery/area/reorder
+func (h *AreaGalleryHandler) Reorder(c *fiber.Ctx) error {
+	var req models.ReorderAreaGalleryRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.SendError(c, 400, "Invalid JSON")
 	}
-	return utils.SendSuccess(c, resp)
-}
 
-// GET /api/v1/venues/:venue_id/areas (List Pin Peta)
-func (h *AreaGalleryHandler) GetVenueAreas(c *fiber.Ctx) error {
-	venueID, _ := uuid.Parse(c.Params("venue_id"))
-	resp, err := h.service.GetVenueAreas(c.Context(), venueID)
-	if err != nil {
+	if err := h.service.ReorderGallery(c.Context(), req); err != nil {
 		return utils.SendError(c, 500, err.Error())
 	}
-	return utils.SendSuccess(c, resp)
+	return utils.SendSuccess(c, "Area gallery reordered")
 }
 
-// PUT & DELETE skipped for brevity (pola sama)
+// PATCH /gallery/area/item
+func (h *AreaGalleryHandler) UpdateItem(c *fiber.Ctx) error {
+	var req models.UpdateAreaGalleryItemRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.SendError(c, 400, "Invalid JSON")
+	}
+
+	if err := h.service.UpdateGalleryItem(c.Context(), req); err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+	return utils.SendSuccess(c, "Item updated")
+}
+
+// DELETE /gallery/area/:area_id/:media_id
+func (h *AreaGalleryHandler) RemoveItem(c *fiber.Ctx) error {
+	areaID, _ := uuid.Parse(c.Params("area_id"))
+	mediaID, _ := uuid.Parse(c.Params("media_id"))
+
+	if err := h.service.RemoveGalleryItem(c.Context(), areaID, mediaID); err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+	return utils.SendSuccess(c, "Item removed")
+}

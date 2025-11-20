@@ -2,19 +2,16 @@ package service
 
 import (
 	"context"
-	"errors"
-	"inspacemap/backend/internal/entity"
 	"inspacemap/backend/internal/models"
 	"inspacemap/backend/internal/repository"
-
-	"github.com/google/uuid"
 )
 
 type roleService struct {
 	roleRepo       repository.RoleRepository
-	permissionRepo repository.PermissionRepository
+	permissionRepo repository.PermissionRepository // [FIX] Tambahkan dependensi ini
 }
 
+// [FIX] Update Constructor untuk menerima PermissionRepo
 func NewRoleService(rRepo repository.RoleRepository, pRepo repository.PermissionRepository) RoleService {
 	return &roleService{
 		roleRepo:       rRepo,
@@ -22,57 +19,42 @@ func NewRoleService(rRepo repository.RoleRepository, pRepo repository.Permission
 	}
 }
 
-func (s *roleService) CreateCustomRole(ctx context.Context, orgID uuid.UUID, req models.CreateRoleRequest) (*models.IDResponse, error) {
-	if existing, _ := s.roleRepo.GetByOrganizationIDAndName(ctx, &orgID, req.Name); existing != nil {
-		return nil, errors.New("role with this name already exists in your organization")
-	}
-	newRole := entity.Role{
-		OrganizationID: &orgID, // Set pointer ke Org ID
-		Name:           req.Name,
-		Description:    req.Description,
-		IsSystem:       false,
-	}
-
-	if err := s.roleRepo.Create(ctx, &newRole); err != nil {
+func (s *roleService) GetSystemRoles(ctx context.Context) ([]models.RoleDetail, error) {
+	roles, err := s.roleRepo.GetAll(ctx)
+	if err != nil {
 		return nil, err
 	}
-	for _, permID := range req.PermissionIDs {
-		if err := s.roleRepo.AttachPermission(ctx, newRole.ID, permID); err != nil {
-			return nil, errors.New("failed to attach permission settings")
+
+	var details []models.RoleDetail
+	for _, r := range roles {
+		perms, _ := s.roleRepo.GetPermissions(ctx, r.ID)
+
+		var permKeys []string
+		for _, p := range perms {
+			permKeys = append(permKeys, p.Key)
 		}
+
+		details = append(details, models.RoleDetail{
+			ID:          r.ID,
+			Name:        r.Name,
+			Permissions: permKeys,
+		})
 	}
 
-	return &models.IDResponse{ID: newRole.ID}, nil
+	return details, nil
 }
 
-func (s *roleService) DeleteCustomRole(ctx context.Context, roleID uuid.UUID) error {
-	role, err := s.roleRepo.GetByID(ctx, roleID)
-	if err != nil {
-		return errors.New("role not found")
-	}
-
-	// Security Check: Tidak boleh menghapus System Role
-	if role.IsSystem {
-		return errors.New("cannot delete system role")
-	}
-
-	// TODO: Cek apakah ada user yang masih pakai role ini?
-	// Jika ada, tolak delete atau pindahkan user ke role default.
-
-	return s.roleRepo.Delete(ctx, roleID)
-}
-
-// 3. GetAvailablePermissions
-// Mengembalikan daftar izin yang dikelompokkan (Grouping) agar UI mudah merender (e.g. Accordion)
-func (s *roleService) GetPermissionsByOrganization(ctx context.Context) ([]models.PermissionNode, error) {
-	perms, err := s.permissionRepo.GetByOrganization(ctx)
+// [FIX] Implementasi Method yang Hilang
+func (s *roleService) GetAvailablePermissions(ctx context.Context) ([]models.PermissionNode, error) {
+	// Ambil semua permission dari DB
+	perms, err := s.permissionRepo.GetAll(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Grouping Logic: Map[GroupName][]Items
+	// Grouping: Map[GroupName][]Items
+	// Agar di UI bisa ditampilkan per kategori (misal: "Venue Management", "User Access")
 	groupedMap := make(map[string][]models.PermissionItem)
-
 	for _, p := range perms {
 		groupName := p.Group
 		if groupName == "" {
@@ -80,13 +62,13 @@ func (s *roleService) GetPermissionsByOrganization(ctx context.Context) ([]model
 		}
 
 		groupedMap[groupName] = append(groupedMap[groupName], models.PermissionItem{
-			ID:          p.ID, // ID UUID (dari BaseModel)
+			ID:          p.ID,
 			Key:         p.Key,
 			Description: p.Description,
 		})
 	}
 
-	// Convert Map to Slice untuk JSON Response yang terurut
+	// Convert Map to Slice
 	var nodes []models.PermissionNode
 	for groupName, items := range groupedMap {
 		nodes = append(nodes, models.PermissionNode{
@@ -96,31 +78,4 @@ func (s *roleService) GetPermissionsByOrganization(ctx context.Context) ([]model
 	}
 
 	return nodes, nil
-}
-
-// 4. GetOrgRoles
-// Mengambil daftar Role System + Custom Role milik Org
-func (s *roleService) GetRolesByOrganization(ctx context.Context, orgID uuid.UUID) ([]models.RoleDetail, error) {
-	roles, err := s.roleRepo.GetByOrganizationID(ctx, orgID)
-	if err != nil {
-		return nil, err
-	}
-
-	var details []models.RoleDetail
-	for _, r := range roles {
-		// Mapping Permissions (Entity -> String Keys)
-		var permKeys []string
-		for _, p := range r.Permissions {
-			permKeys = append(permKeys, p.Key)
-		}
-
-		details = append(details, models.RoleDetail{
-			ID:          r.ID,
-			Name:        r.Name,
-			IsSystem:    r.IsSystem,
-			Permissions: permKeys,
-		})
-	}
-
-	return details, nil
 }

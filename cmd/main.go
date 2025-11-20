@@ -29,20 +29,20 @@ func main() {
 	orgMemberRepo := repository.NewOrganizationMemberRepository(db)
 	invitationRepo := repository.NewInvitationRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
-	// permRepo := repository.NewPermissionRepository(db)
+	permRepo := repository.NewPermissionRepository(db)
 
 	venueRepo := repository.NewVenueRepository(db)
 	floorRepo := repository.NewFloorRepository(db)
-	// areaRepo := repository.NewAreaRepository(db)
+	areaRepo := repository.NewAreaRepository(db)
 
 	graphRepo := repository.NewGraphRepository(db)
 	revisionRepo := repository.NewGraphRevisionRepository(db)
 
 	mediaRepo := repository.NewMediaRepository(db)
-	// venueGalleryRepo := repository.NewVenueGalleryRepository(db)
-	// areaGalleryRepo := repository.NewAreaGalleryRepository(db)
+	venueGalleryRepo := repository.NewVenueGalleryRepository(db)
+	areaGalleryRepo := repository.NewAreaGalleryRepository(db)
 
-	// auditRepo := repository.NewAuditRepository(db)
+	auditRepo := repository.NewAuditRepository(db)
 
 	// 3. INIT EXTERNAL SERVICES (Infrastructure)
 	// Mengambil config dari Env
@@ -57,32 +57,26 @@ func main() {
 
 	// 4. INIT SERVICES (Business Logic Layer)
 	authService := service.NewAuthService(userRepo, orgRepo, orgMemberRepo, invitationRepo, roleRepo)
-
-	// Service manajemen media & file
 	mediaService := service.NewMediaService(mediaRepo, storageProvider, minioBucket, cdnURL)
-
-	// Service manajemen konten gallery
-	// venueGalleryService := service.NewVenueGalleryService(venueGalleryRepo)
-	// areaGalleryService := service.NewAreaGalleryService(areaGalleryRepo)
-	// Kita buat wrapper GalleryService jika diperlukan, atau inject masing-masing
-	// Di implementasi service/gallery_service.go sebelumnya, kita menggabungkannya dalam struct terpisah.
-
-	// Service utama navigasi & venue
-	// areaService := service.NewAreaService(areaRepo, areaGalleryRepo, graphRepo)
+	areaService := service.NewAreaService(areaRepo, areaGalleryRepo, graphRepo)
 	graphService := service.NewGraphService(graphRepo, revisionRepo, floorRepo, venueRepo)
 	venueService := service.NewVenueService(venueRepo)
-
-	// Service pendukung (Team, Role, Audit)
-	// teamService := service.NewTeamService(userRepo, invitationRepo, orgMemberRepo, roleRepo)
-	// roleService := service.NewRoleService(roleRepo, permRepo)
-	// auditService := service.NewAuditService(auditRepo)
+	teamService := service.NewTeamService(userRepo, invitationRepo, orgMemberRepo, roleRepo)
+	roleService := service.NewRoleService(roleRepo, permRepo)
+	venueGalleryService := service.NewVenueGalleryService(venueGalleryRepo)
+	areaGalleryService := service.NewAreaGalleryService(areaGalleryRepo)
+	auditService := service.NewAuditService(auditRepo)
 
 	// 5. INIT HANDLERS (HTTP Transport Layer)
 	authHandler := handler.NewAuthHandler(authService)
+	teamRoleHandler := handler.NewTeamRoleHandler(teamService, roleService)
 	venueHandler := handler.NewVenueHandler(venueService)
+	venueGalleryHandler := handler.NewVenueGalleryHandler(venueGalleryService) // Implementasi nanti
 	graphHandler := handler.NewGraphHandler(graphService)
 	mediaHandler := handler.NewMediaHandler(mediaService)
-
+	areaHandler := handler.NewAreaHandler(areaService)
+	areaGalleryHandler := handler.NewAreaGalleryHandler(areaGalleryService) // Implementasi nanti
+	auditHandler := handler.NewAuditHandler(auditService)                   // Implementasi nanti
 	// 6. SETUP FIBER APP
 	app := fiber.New(fiber.Config{
 		AppName: "InSpaceMap API v1",
@@ -98,11 +92,16 @@ func main() {
 
 	// 7. REGISTER ROUTES
 	routeConfig := route.RouteConfig{
-		App:          app,
-		AuthHandler:  authHandler,
-		VenueHandler: venueHandler,
-		GraphHandler: graphHandler,
-		MediaHandler: mediaHandler,
+		App:                 app,
+		TeamRoleHandler:     teamRoleHandler,
+		AuthHandler:         authHandler,
+		AreaHandler:         areaHandler,
+		AreaGalleryHandler:  areaGalleryHandler,
+		VenueHandler:        venueHandler,
+		VenueGalleryHandler: venueGalleryHandler,
+		GraphHandler:        graphHandler,
+		MediaHandler:        mediaHandler,
+		AuditHandler:        auditHandler,
 	}
 	routeConfig.Setup()
 

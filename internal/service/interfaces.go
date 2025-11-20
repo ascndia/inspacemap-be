@@ -22,10 +22,8 @@ type TeamService interface {
 }
 
 type RoleService interface {
-	CreateRole(ctx context.Context, orgID uuid.UUID, req models.CreateRoleRequest) (*models.IDResponse, error)
-	UpdateRole(ctx context.Context, roleID uuid.UUID, req models.UpdateRoleRequest) error
-	DeleteRole(ctx context.Context, roleID uuid.UUID) error
-	GetRolesByOrganization(ctx context.Context, orgID uuid.UUID) ([]models.RoleDetail, error)
+	GetSystemRoles(ctx context.Context) ([]models.RoleDetail, error)
+	GetAvailablePermissions(ctx context.Context) ([]models.PermissionNode, error)
 }
 
 type GraphService interface {

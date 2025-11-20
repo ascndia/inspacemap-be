@@ -62,6 +62,7 @@ type RoleRepository interface {
 
 type PermissionRepository interface {
 	BaseRepository[entity.Permission, uuid.UUID]
+	GetAll(ctx context.Context) ([]entity.Permission, error)
 	GetByUserAndOrg(ctx context.Context, userID, orgID uuid.UUID) ([]entity.Permission, error)
 }
 type AuthRepository interface {

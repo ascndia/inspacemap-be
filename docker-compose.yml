@@ -1,59 +1,70 @@
 version: "3.8"
 
 services:
-  # 1. BACKEND APP (GO)
+  # ==========================================
+  # 1. APP BACKEND (GO + FIBER)
+  # ==========================================
   backend:
-    build: .
     container_name: inspacemap_api
-    restart: always
+    build: . # Build dari Dockerfile di folder ini
+    restart: always # Auto-restart kalau crash
     ports:
-      - "8080:8080"
+      - "8080:8080" # Akses dari luar via localhost:8080
     depends_on:
-      - db
-      - minio
+      - db # Tunggu DB jalan dulu
+      - minio # Tunggu MinIO jalan dulu
     env_file:
-      - .env
+      - .env # Baca password dari file .env
     environment:
-      # Override DB_HOST agar mengarah ke nama service docker
+      # OVERRIDE PENTING UNTUK NETWORKING INTER-CONTAINER
+      # Di dalam container, "localhost" itu dirinya sendiri.
+      # Jadi kita harus ganti host-nya menjadi nama service tetangga.
       - DB_HOST=db
       - MINIO_ENDPOINT=http://minio:9000
+      - APP_ENV=production # Agar log lebih bersih
 
+  # ==========================================
   # 2. DATABASE (POSTGRESQL)
+  # ==========================================
   db:
     image: postgres:15-alpine
     container_name: inspacemap_db
     restart: always
     environment:
-      POSTGRES_USER: ${DB_USER}
+      POSTGRES_USER: ${DB_USER} # Ambil dari .env
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5432:5432" # Expose ke host agar bisa diakses DBeaver/PgAdmin
+      - "5432:5432" # Buka port agar bisa dicek pakai DBeaver/PgAdmin
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data # Simpan data di harddisk host
 
-  # 3. OBJECT STORAGE (MINIO)
+  # ==========================================
+  # 3. OBJECT STORAGE (MINIO / S3)
+  # ==========================================
   minio:
     image: minio/minio:latest
     container_name: inspacemap_storage
+    # Command wajib untuk menjalankan server MinIO
     command: server /data --console-address ":9001"
     restart: always
     ports:
-      - "9000:9000" # API Port (S3 Compatible)
-      - "9001:9001" # Web Console Port
+      - "9000:9000" # API Port (Dipakai Backend)
+      - "9001:9001" # Console Port (Dipakai Kamu buka di Browser)
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
     volumes:
-      - minio_data:/data
-    # Healthcheck untuk memastikan MinIO siap sebelum dipakai (Opsional tapi bagus)
+      - minio_data:/data # Simpan file foto panorama di harddisk host
+
+    # Healthcheck: Memastikan MinIO benar-benar siap menerima request
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
 
-# Volume persisten agar data tidak hilang saat container dimatikan
+# Definisi Volume (Folder penyimpanan data)
 volumes:
   postgres_data:
   minio_data:

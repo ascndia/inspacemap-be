@@ -28,12 +28,9 @@ type Permission struct {
 
 type Role struct {
 	BaseEntity
-	OrganizationID *uuid.UUID    `gorm:"index"`
-	Organization   *Organization `gorm:"foreignKey:OrganizationID"`
-	Name           string        `gorm:"type:varchar(50);not null"`
-	Description    string        `gorm:"type:varchar(255)"`
-	IsSystem       bool          `gorm:"default:false"`
-	Permissions    []Permission  `gorm:"many2many:role_permissions;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Name        string       `gorm:"type:varchar(50);not null"`
+	Description string       `gorm:"type:varchar(255)"`
+	Permissions []Permission `gorm:"many2many:role_permissions;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 type RolePermission struct {

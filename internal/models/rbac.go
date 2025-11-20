@@ -3,9 +3,10 @@ package models
 import (
 	"github.com/google/uuid"
 )
+
 type CreateRoleRequest struct {
-	Name          string `json:"name" validate:"required,min=3"`
-	Description   string `json:"description"`
+	Name          string      `json:"name" validate:"required,min=3"`
+	Description   string      `json:"description"`
 	PermissionIDs []uuid.UUID `json:"permission_ids" validate:"required,min=1"`
 }
 
@@ -16,9 +17,8 @@ type UpdateUserRoleRequest struct {
 
 type RoleDetail struct {
 	ID          uuid.UUID `json:"id"`
-	Name        string   `json:"name"`
-	IsSystem    bool     `json:"is_system"`
-	Permissions []string `json:"permissions"`
+	Name        string    `json:"name"`
+	Permissions []string  `json:"permissions"`
 }
 
 type PermissionNode struct {
@@ -28,6 +28,6 @@ type PermissionNode struct {
 
 type PermissionItem struct {
 	ID          uuid.UUID `json:"id"`
-	Key         string `json:"key"`
-	Description string `json:"description"`
+	Key         string    `json:"key"`
+	Description string    `json:"description"`
 }
