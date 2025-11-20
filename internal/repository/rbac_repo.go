@@ -8,10 +8,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// =================================================================
-// ROLE REPOSITORY (READ ONLY FOR APP USAGE)
-// =================================================================
-
 type roleRepo struct {
 	BaseRepository[entity.Role, uuid.UUID]
 	db *gorm.DB
@@ -43,15 +39,11 @@ func (r *roleRepo) GetAll(ctx context.Context) ([]entity.Role, error) {
 func (r *roleRepo) GetPermissions(ctx context.Context, roleID uuid.UUID) ([]entity.Permission, error) {
 	var perms []entity.Permission
 	err := r.db.WithContext(ctx).
-		Model(&entity.Role{BaseModel: entity.BaseModel{ID: roleID}}).
+		Model(&entity.Role{BaseEntity: entity.BaseEntity{ID: roleID}}).
 		Association("Permissions").
 		Find(&perms)
 	return perms, err
 }
-
-// =================================================================
-// PERMISSION REPOSITORY (HELPER)
-// =================================================================
 
 type permissionRepo struct {
 	BaseRepository[entity.Permission, uuid.UUID]
