@@ -1,0 +1,70 @@
+version: "3.8"
+
+services:
+  # ==========================================
+  # 1. APP BACKEND (GO + FIBER) - DEV MODE
+  # ==========================================
+  backend_dev:
+    container_name: inspacemap_api_dev
+    build: . # Build dari Dockerfile di folder ini
+    restart: always # Auto-restart kalau crash
+    ports:
+      - "8081:8080" # Akses dari luar via localhost:8081 (different from prod)
+    depends_on:
+      - db_dev # Tunggu DB jalan dulu
+      - minio_dev # Tunggu MinIO jalan dulu
+    env_file:
+      - .env # Baca password dari file .env
+    environment:
+      # OVERRIDE PENTING UNTUK NETWORKING INTER-CONTAINER
+      # Di dalam container, "localhost" itu dirinya sendiri.
+      # Jadi kita harus ganti host-nya menjadi nama service tetangga.
+      - DB_HOST=db_dev
+      - MINIO_ENDPOINT=http://minio_dev:9000
+      - APP_ENV=development # Enable dev seeding with sample data
+
+  # ==========================================
+  # 2. DATABASE (POSTGRESQL) - DEV
+  # ==========================================
+  db_dev:
+    image: postgres:15-alpine
+    container_name: inspacemap_db_dev
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER} # Ambil dari .env
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5433:5432" # Buka port agar bisa dicek pakai DBeaver/PgAdmin (different port)
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data # Simpan data di harddisk host for persistence
+
+  # ==========================================
+  # 3. OBJECT STORAGE (MINIO / S3) - DEV
+  # ==========================================
+  minio_dev:
+    image: minio/minio:latest
+    container_name: inspacemap_storage_dev
+    # Command wajib untuk menjalankan server MinIO
+    command: server /data --console-address ":9001"
+    restart: always
+    ports:
+      - "9002:9000" # API Port (Dipakai Backend) - different port
+      - "9003:9001" # Console Port (Dipakai Kamu buka di Browser) - different port
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio_dev_data:/data # Simpan file foto panorama di harddisk host
+
+    # Healthcheck: Memastikan MinIO benar-benar siap menerima request
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+# Definisi Volume (Folder penyimpanan data)
+volumes:
+  postgres_dev_data:
+  minio_dev_data:
