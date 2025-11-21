@@ -3,15 +3,17 @@ run:
   issues-exit-code: 1
   tests: true
   build-tags: []
-  skip-dirs:
+
+issues:
+  exclude-dirs:
     - vendor
     - test
-  skip-files:
+  exclude-files:
     - ".*\\.pb\\.go$"
     - ".*_test\\.go$"
 
 output:
-  format: colored-line-number
+  formats: colored-line-number
   print-issued-lines: true
   print-linter-name: true
 
@@ -22,8 +24,6 @@ linters-settings:
     local-prefixes: github.com/ascndia/inspacemap-be
   golint:
     min-confidence: 0.8
-  govet:
-    check-shadowing: true
   misspell:
     locale: US
   lll:
@@ -58,6 +58,7 @@ linters:
     - noctx
     - nolintlint
     - rowserrcheck
+    - shadow
     - staticcheck
     - structcheck
     - stylecheck
