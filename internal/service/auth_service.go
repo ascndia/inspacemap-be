@@ -41,9 +41,12 @@ func (s *authService) Login(ctx context.Context, req models.LoginRequest) (*mode
 	if err != nil {
 		return nil, errors.New("invalid email or password")
 	}
-	if req.Password != user.PasswordHash {
+	
+	// Check password hash
+	if !utils.CheckPasswordHash(req.Password, user.PasswordHash) {
 		return nil, errors.New("invalid email or password")
 	}
+	
 	token, _ := s.generateAuthResponse(user)
 	return token, nil
 }
@@ -66,10 +69,16 @@ func (s *authService) Register(ctx context.Context, req models.RegisterRequest) 
 		return nil, errors.New("system error: owner role not found")
 	}
 
+	// Hash password
+	hashedPassword, err := utils.HashPassword(req.Password)
+	if err != nil {
+		return nil, errors.New("failed to hash password")
+	}
+
 	newUser := entity.User{
 		FullName:     req.FullName,
 		Email:        req.Email,
-		PasswordHash: req.Password,
+		PasswordHash: hashedPassword,
 	}
 	if err := s.userRepo.Create(ctx, &newUser); err != nil {
 		return nil, err
@@ -106,10 +115,16 @@ func (s *authService) AcceptInvitation(ctx context.Context, req models.AcceptInv
 
 		targetUserID = existingUser.ID
 	} else {
+		// Hash password for new user
+		hashedPassword, err := utils.HashPassword(req.Password)
+		if err != nil {
+			return nil, errors.New("failed to hash password")
+		}
+		
 		newUser := entity.User{
 			FullName:        req.FullName,
 			Email:           invite.Email,
-			PasswordHash:    req.Password,
+			PasswordHash:    hashedPassword,
 			IsEmailVerified: true,
 		}
 		if err := s.userRepo.Create(ctx, &newUser); err != nil {
