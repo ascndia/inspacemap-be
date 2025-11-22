@@ -87,4 +87,10 @@ func (c *RouteConfig) Setup() {
 	editor.Post("/connections", c.GraphHandler.ConnectNodes)
 
 	editor.Post("/:venue_id/publish", c.GraphHandler.Publish)
+
+	// Graph Revision Management
+	editor.Post("/:venue_id/revisions/draft", c.GraphHandler.CreateDraftRevision)
+	editor.Get("/:venue_id/revisions", c.GraphHandler.ListRevisions)
+	editor.Get("/revisions/:revision_id", c.GraphHandler.GetRevisionDetail)
+	editor.Delete("/revisions/:revision_id", c.GraphHandler.DeleteRevision)
 }

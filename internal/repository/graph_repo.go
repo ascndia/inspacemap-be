@@ -68,3 +68,19 @@ func (r *graphRepo) DeleteEdge(ctx context.Context, fromID, toID uuid.UUID) erro
 		Where("from_node_id = ? AND to_node_id = ?", fromID, toID).
 		Delete(&entity.GraphEdge{}).Error
 }
+
+func (r *graphRepo) CountNodesByFloorID(ctx context.Context, floorID uuid.UUID) (int, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&entity.GraphNode{}).
+		Where("floor_id = ?", floorID).
+		Count(&count).Error
+	return int(count), err
+}
+
+func (r *graphRepo) CountAreasByFloorID(ctx context.Context, floorID uuid.UUID) (int, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&entity.GraphNode{}).
+		Where("floor_id = ? AND area_id IS NOT NULL", floorID).
+		Count(&count).Error
+	return int(count), err
+}

@@ -132,3 +132,64 @@ func (h *GraphHandler) Publish(c *fiber.Ctx) error {
 	}
 	return utils.SendSuccess(c, "Graph Published Successfully")
 }
+
+// --- GRAPH REVISION MANAGEMENT ---
+
+// POST /api/v1/editor/:venue_id/revisions/draft
+func (h *GraphHandler) CreateDraftRevision(c *fiber.Ctx) error {
+	venueID, err := uuid.Parse(c.Params("venue_id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid Venue ID")
+	}
+
+	resp, err := h.service.CreateDraftRevision(c.Context(), venueID)
+	if err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+
+	return utils.SendCreated(c, resp)
+}
+
+// GET /api/v1/editor/:venue_id/revisions
+func (h *GraphHandler) ListRevisions(c *fiber.Ctx) error {
+	venueID, err := uuid.Parse(c.Params("venue_id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid Venue ID")
+	}
+
+	revisions, err := h.service.ListRevisions(c.Context(), venueID)
+	if err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+
+	return utils.SendSuccess(c, revisions)
+}
+
+// GET /api/v1/editor/revisions/:revision_id
+func (h *GraphHandler) GetRevisionDetail(c *fiber.Ctx) error {
+	revisionID, err := uuid.Parse(c.Params("revision_id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid Revision ID")
+	}
+
+	detail, err := h.service.GetRevisionDetail(c.Context(), revisionID)
+	if err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+
+	return utils.SendSuccess(c, detail)
+}
+
+// DELETE /api/v1/editor/revisions/:revision_id
+func (h *GraphHandler) DeleteRevision(c *fiber.Ctx) error {
+	revisionID, err := uuid.Parse(c.Params("revision_id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid Revision ID")
+	}
+
+	if err := h.service.DeleteRevision(c.Context(), revisionID); err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+
+	return utils.SendSuccess(c, "Revision deleted successfully")
+}

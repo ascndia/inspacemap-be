@@ -256,3 +256,110 @@ func (s *graphService) PublishChanges(ctx context.Context, venueID uuid.UUID, re
 	// Panggil Repository untuk melakukan Deep Copy Transaction
 	return s.revisionRepo.PublishDraft(ctx, venueID, req.Note)
 }
+
+// =================================================================
+// 5. GRAPH REVISION MANAGEMENT
+// =================================================================
+
+func (s *graphService) CreateDraftRevision(ctx context.Context, venueID uuid.UUID) (*models.IDResponse, error) {
+	draft, err := s.revisionRepo.CreateDraft(ctx, venueID)
+	if err != nil {
+		return nil, err
+	}
+	return &models.IDResponse{ID: draft.ID}, nil
+}
+
+func (s *graphService) ListRevisions(ctx context.Context, venueID uuid.UUID) ([]models.RevisionHistoryItem, error) {
+	revisions, err := s.revisionRepo.GetByVenueID(ctx, venueID)
+	if err != nil {
+		return nil, err
+	}
+
+	var items []models.RevisionHistoryItem
+	for _, rev := range revisions {
+		// Get creator name - assuming we have user repo, but for now use ID
+		createdBy := rev.CreatedByID.String()
+
+		items = append(items, models.RevisionHistoryItem{
+			ID:        rev.ID,
+			Status:    string(rev.Status),
+			Note:      rev.Note,
+			CreatedAt: rev.CreatedAt,
+			CreatedBy: createdBy,
+		})
+	}
+
+	return items, nil
+}
+
+func (s *graphService) GetRevisionDetail(ctx context.Context, revisionID uuid.UUID) (*models.GraphRevisionDetail, error) {
+	// Get revision
+	revision, err := s.revisionRepo.GetByID(ctx, revisionID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get floors for this revision
+	floors, err := s.floorRepo.GetByGraphRevisionID(ctx, revisionID)
+	if err != nil {
+		return nil, err
+	}
+
+	var floorDetails []models.FloorDetail
+	for _, floor := range floors {
+		// Count nodes and areas
+		nodesCount, err := s.graphRepo.CountNodesByFloorID(ctx, floor.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		areasCount, err := s.graphRepo.CountAreasByFloorID(ctx, floor.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Get map image URL
+		mapImageURL := ""
+		if floor.MapImage != nil {
+			mapImageURL = floor.MapImage.PublicURL
+		}
+
+		floorDetails = append(floorDetails, models.FloorDetail{
+			ID:             floor.ID,
+			Name:           floor.Name,
+			LevelIndex:     floor.LevelIndex,
+			MapImageURL:    mapImageURL,
+			MapWidth:       floor.MapWidth,
+			MapHeight:      floor.MapHeight,
+			PixelsPerMeter: floor.PixelsPerMeter,
+			IsActive:       floor.IsActive,
+			NodesCount:     nodesCount,
+			AreasCount:     areasCount,
+		})
+	}
+
+	return &models.GraphRevisionDetail{
+		ID:        revision.ID,
+		VenueID:   revision.VenueID,
+		Status:    string(revision.Status),
+		Note:      revision.Note,
+		CreatedAt: revision.CreatedAt,
+		UpdatedAt: revision.UpdatedAt,
+		Floors:    floorDetails,
+	}, nil
+}
+
+func (s *graphService) DeleteRevision(ctx context.Context, revisionID uuid.UUID) error {
+	// Check if revision is draft (only drafts can be deleted)
+	revision, err := s.revisionRepo.GetByID(ctx, revisionID)
+	if err != nil {
+		return err
+	}
+
+	if revision.Status != entity.StatusDraft {
+		return errors.New("only draft revisions can be deleted")
+	}
+
+	// Delete the revision (cascade will handle floors, nodes, edges)
+	return s.revisionRepo.Delete(ctx, revisionID)
+}

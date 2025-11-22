@@ -36,6 +36,12 @@ type GraphService interface {
 	DeleteConnection(ctx context.Context, fromID, toID uuid.UUID) error
 	GetEditorData(ctx context.Context, venueID uuid.UUID) (*models.ManifestResponse, error)
 	PublishChanges(ctx context.Context, venueID uuid.UUID, req models.PublishDraftRequest) error
+
+	// Graph Revision Management
+	CreateDraftRevision(ctx context.Context, venueID uuid.UUID) (*models.IDResponse, error)
+	ListRevisions(ctx context.Context, venueID uuid.UUID) ([]models.RevisionHistoryItem, error)
+	GetRevisionDetail(ctx context.Context, revisionID uuid.UUID) (*models.GraphRevisionDetail, error)
+	DeleteRevision(ctx context.Context, revisionID uuid.UUID) error
 }
 
 type OrganizationService interface {

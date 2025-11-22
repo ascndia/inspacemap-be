@@ -98,6 +98,8 @@ type GraphRepository interface {
 	DeleteNode(ctx context.Context, id uuid.UUID) error
 	ConnectNodes(ctx context.Context, edge *entity.GraphEdge) error
 	DeleteEdge(ctx context.Context, fromID, toID uuid.UUID) error
+	CountNodesByFloorID(ctx context.Context, floorID uuid.UUID) (int, error)
+	CountAreasByFloorID(ctx context.Context, floorID uuid.UUID) (int, error)
 }
 
 type GraphRevisionRepository interface {

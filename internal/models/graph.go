@@ -17,6 +17,29 @@ type RevisionHistoryItem struct {
 	CreatedAt time.Time `json:"created_at"`
 	CreatedBy string    `json:"created_by"`
 }
+
+type GraphRevisionDetail struct {
+	ID        uuid.UUID `json:"id"`
+	VenueID   uuid.UUID `json:"venue_id"`
+	Status    string    `json:"status"`
+	Note      string    `json:"note"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Floors    []FloorDetail `json:"floors"`
+}
+
+type FloorDetail struct {
+	ID             uuid.UUID `json:"id"`
+	Name           string    `json:"name"`
+	LevelIndex     int       `json:"level_index"`
+	MapImageURL    string    `json:"map_image_url"`
+	MapWidth       int       `json:"map_width"`
+	MapHeight      int       `json:"map_height"`
+	PixelsPerMeter float64   `json:"pixels_per_meter"`
+	IsActive       bool      `json:"is_active"`
+	NodesCount     int       `json:"nodes_count"`
+	AreasCount     int       `json:"areas_count"`
+}
 type CreateNodeRequest struct {
 	FloorID         uuid.UUID `json:"floor_id" validate:"required"`
 	X               float64   `json:"x" validate:"required"` 
