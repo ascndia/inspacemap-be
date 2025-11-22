@@ -4,6 +4,7 @@ import (
 	"inspacemap/backend/internal/models"
 	"inspacemap/backend/internal/service"
 	"inspacemap/backend/pkg/utils"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -56,8 +57,59 @@ func (h *VenueHandler) GetDetail(c *fiber.Ctx) error {
 		return utils.SendError(c, 400, "Invalid UUID")
 	}
 
-	// TODO: Implement GetVenueDetail di service dulu (ini placeholder)
-	// detail, err := h.service.GetVenueDetail(c.Context(), id)
+	detail, err := h.service.GetVenueDetail(c.Context(), id)
+	if err != nil {
+		return utils.SendError(c, 404, "Venue not found")
+	}
 
-	return utils.SendSuccess(c, fiber.Map{"id": id, "status": "todo"})
+	return utils.SendSuccess(c, detail)
+}
+
+// GET /api/v1/venues (Admin List)
+func (h *VenueHandler) ListVenues(c *fiber.Ctx) error {
+	// Default values
+	defaultLimit := 20
+	defaultOffset := 0
+
+	query := models.VenueQuery{
+		Limit:  &defaultLimit,
+		Offset: &defaultOffset,
+	}
+
+	// Parse limit
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if limit, err := strconv.Atoi(limitStr); err == nil && limit > 0 && limit <= 100 {
+			query.Limit = &limit
+		}
+	}
+
+	// Parse offset
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		if offset, err := strconv.Atoi(offsetStr); err == nil && offset >= 0 {
+			query.Offset = &offset
+		}
+	}
+
+	// Parse filters
+	if name := c.Query("name"); name != "" {
+		query.Name = &name
+	}
+	if city := c.Query("city"); city != "" {
+		query.City = &city
+	}
+	if visibility := c.Query("visibility"); visibility != "" {
+		query.Visibility = &visibility
+	}
+
+	venues, total, err := h.service.ListVenues(c.Context(), query)
+	if err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+
+	return utils.SendSuccess(c, fiber.Map{
+		"venues": venues,
+		"total":  total,
+		"limit":  *query.Limit,
+		"offset": *query.Offset,
+	})
 }

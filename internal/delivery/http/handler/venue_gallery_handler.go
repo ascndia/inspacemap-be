@@ -18,10 +18,18 @@ func NewVenueGalleryHandler(s service.VenueGalleryService) *VenueGalleryHandler 
 }
 
 func (h *VenueGalleryHandler) AddItems(c *fiber.Ctx) error {
+	venueID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid Venue ID")
+	}
+
 	var req models.AddGalleryVenueItemsRequest
 	if err := c.BodyParser(&req); err != nil {
 		return utils.SendError(c, 400, "Invalid JSON")
 	}
+
+	// Set venue ID from URL parameter
+	req.VenueID = venueID
 
 	if err := h.service.AddGalleryItems(c.Context(), req); err != nil {
 		return utils.SendError(c, 500, err.Error())
@@ -30,10 +38,18 @@ func (h *VenueGalleryHandler) AddItems(c *fiber.Ctx) error {
 }
 
 func (h *VenueGalleryHandler) Reorder(c *fiber.Ctx) error {
+	venueID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid Venue ID")
+	}
+
 	var req models.ReorderVenueGalleryRequest
 	if err := c.BodyParser(&req); err != nil {
 		return utils.SendError(c, 400, "Invalid JSON")
 	}
+
+	// Set venue ID from URL parameter
+	req.VenueID = venueID
 
 	if err := h.service.ReorderGallery(c.Context(), req); err != nil {
 		return utils.SendError(c, 500, err.Error())
@@ -42,10 +58,24 @@ func (h *VenueGalleryHandler) Reorder(c *fiber.Ctx) error {
 }
 
 func (h *VenueGalleryHandler) UpdateItem(c *fiber.Ctx) error {
+	venueID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid Venue ID")
+	}
+
+	mediaID, err := uuid.Parse(c.Params("media_id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid Media ID")
+	}
+
 	var req models.UpdateVenueGalleryItemRequest
 	if err := c.BodyParser(&req); err != nil {
 		return utils.SendError(c, 400, "Invalid JSON")
 	}
+
+	// Set IDs from URL parameters
+	req.VenueID = venueID
+	req.MediaAssetID = mediaID
 
 	if err := h.service.UpdateGalleryItem(c.Context(), req); err != nil {
 		return utils.SendError(c, 500, err.Error())
@@ -54,7 +84,7 @@ func (h *VenueGalleryHandler) UpdateItem(c *fiber.Ctx) error {
 }
 
 func (h *VenueGalleryHandler) RemoveItem(c *fiber.Ctx) error {
-	venueID, err := uuid.Parse(c.Params("venue_id"))
+	venueID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return utils.SendError(c, 400, "Invalid Venue ID")
 	}

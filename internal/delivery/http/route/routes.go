@@ -46,17 +46,19 @@ func (c *RouteConfig) Setup() {
 
 	venues := tenant.Group("/venues")
 	venues.Post("/", c.VenueHandler.CreateVenue)
+	venues.Get("/", c.VenueHandler.ListVenues)
+	venues.Get("/:id", c.VenueHandler.GetDetail)
+
+	// Venue Gallery endpoints
+	venues.Post("/:id/gallery", c.VenueGalleryHandler.AddItems)
+	venues.Put("/:id/gallery/reorder", c.VenueGalleryHandler.Reorder)
+	venues.Patch("/:id/gallery/:media_id", c.VenueGalleryHandler.UpdateItem)
+	venues.Delete("/:id/gallery/:media_id", c.VenueGalleryHandler.RemoveItem)
 
 	areas := tenant.Group("/areas")
 	areas.Post("/", c.AreaHandler.CreateArea)
 
 	tenant.Get("/venues/:venue_id/areas", c.AreaHandler.GetVenueAreas)
-
-	vGallery := tenant.Group("/gallery/venue")
-	vGallery.Post("/", c.VenueGalleryHandler.AddItems)
-	vGallery.Put("/reorder", c.VenueGalleryHandler.Reorder)
-	vGallery.Patch("/item", c.VenueGalleryHandler.UpdateItem)
-	vGallery.Delete("/:venue_id/:media_id", c.VenueGalleryHandler.RemoveItem)
 
 	aGallery := tenant.Group("/gallery/area")
 	aGallery.Post("/", c.AreaGalleryHandler.AddItems)
