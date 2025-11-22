@@ -222,10 +222,9 @@ func (s *graphService) CreateNode(ctx context.Context, req models.CreateNodeRequ
 		return nil, errors.New("cannot create node: target floor is not in draft mode")
 	}
 
-	// B. Validasi Koordinat
-	if req.X < 0 || req.Y < 0 {
-		return nil, errors.New("coordinates cannot be negative")
-	}
+	// B. Validasi Koordinat - Allow negative coordinates for flexibility
+	// Note: Coordinates should ideally be >= 0 relative to map origin,
+	// but frontend may send negative values due to canvas positioning
 
 	// C. Create Entity
 	node := entity.GraphNode{
