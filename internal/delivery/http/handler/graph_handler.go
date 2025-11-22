@@ -4,6 +4,7 @@ import (
 	"inspacemap/backend/internal/models"
 	"inspacemap/backend/internal/service"
 	"inspacemap/backend/pkg/utils"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -223,6 +224,11 @@ func (h *GraphHandler) Publish(c *fiber.Ctx) error {
 	}
 
 	if err := h.service.PublishChanges(c.Context(), venueID, req); err != nil {
+		// Check for business logic validation errors
+		if strings.Contains(err.Error(), "no draft revision found") ||
+			strings.Contains(err.Error(), "cannot publish empty revision") {
+			return utils.SendError(c, 400, err.Error())
+		}
 		return utils.SendError(c, 500, err.Error())
 	}
 	return utils.SendSuccess(c, "Graph Published Successfully")
@@ -239,6 +245,10 @@ func (h *GraphHandler) CreateDraftRevision(c *fiber.Ctx) error {
 
 	resp, err := h.service.CreateDraftRevision(c.Context(), venueID)
 	if err != nil {
+		// Check for business logic validation errors
+		if strings.Contains(err.Error(), "draft already exists") {
+			return utils.SendError(c, 400, err.Error())
+		}
 		return utils.SendError(c, 500, err.Error())
 	}
 
@@ -288,6 +298,10 @@ func (h *GraphHandler) UpdateRevision(c *fiber.Ctx) error {
 	}
 
 	if err := h.service.UpdateRevision(c.Context(), revisionID, req); err != nil {
+		// Check for business logic validation errors
+		if strings.Contains(err.Error(), "only draft revisions can be updated") {
+			return utils.SendError(c, 400, err.Error())
+		}
 		return utils.SendError(c, 500, err.Error())
 	}
 
@@ -302,6 +316,10 @@ func (h *GraphHandler) DeleteRevision(c *fiber.Ctx) error {
 	}
 
 	if err := h.service.DeleteRevision(c.Context(), revisionID); err != nil {
+		// Check for business logic validation errors
+		if strings.Contains(err.Error(), "only draft revisions can be deleted") {
+			return utils.SendError(c, 400, err.Error())
+		}
 		return utils.SendError(c, 500, err.Error())
 	}
 
