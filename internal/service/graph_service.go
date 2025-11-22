@@ -316,8 +316,13 @@ func (s *graphService) GetEditorData(ctx context.Context, venueID uuid.UUID) (*m
 			return nil, err
 		}
 		// Draft baru pasti kosong, return struktur kosong
-		// (Atau reload draft yang baru dibuat untuk memastikan relasi terload)
-		// return &model.ManifestResponse{...}, nil
+		return &models.ManifestResponse{
+			VenueID:     venueID,
+			VenueName:   "",
+			LastUpdated: draft.CreatedAt,
+			StartNodeID: uuid.Nil,
+			Floors:      []models.FloorData{}, // Explicit empty array
+		}, nil
 	}
 
 	// 2. Mapping Entity GraphRevision -> DTO ManifestResponse
@@ -455,6 +460,11 @@ func (s *graphService) ListRevisions(ctx context.Context, venueID uuid.UUID) ([]
 		return nil, err
 	}
 
+	// Ensure we return empty slice instead of nil
+	if revisions == nil {
+		return []models.RevisionHistoryItem{}, nil
+	}
+
 	var items []models.RevisionHistoryItem
 	for _, rev := range revisions {
 		// Get creator name - assuming we have user repo, but for now use ID
@@ -483,6 +493,11 @@ func (s *graphService) GetRevisionDetail(ctx context.Context, revisionID uuid.UU
 	floors, err := s.floorRepo.GetByGraphRevisionID(ctx, revisionID)
 	if err != nil {
 		return nil, err
+	}
+
+	// Ensure floors is not nil
+	if floors == nil {
+		floors = []entity.Floor{}
 	}
 
 	var floorDetails []models.FloorDetail
@@ -525,7 +540,7 @@ func (s *graphService) GetRevisionDetail(ctx context.Context, revisionID uuid.UU
 		Note:      revision.Note,
 		CreatedAt: revision.CreatedAt,
 		UpdatedAt: revision.UpdatedAt,
-		Floors:    floorDetails,
+		Floors:    floorDetails, // This will be empty slice if no floors
 	}, nil
 }
 
