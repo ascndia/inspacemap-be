@@ -99,5 +99,6 @@ func (c *RouteConfig) Setup() {
 	editor.Post("/:venue_id/revisions/draft", c.GraphHandler.CreateDraftRevision)
 	editor.Get("/:venue_id/revisions", c.GraphHandler.ListRevisions)
 	editor.Get("/revisions/:revision_id", c.GraphHandler.GetRevisionDetail)
+	editor.Put("/revisions/:revision_id", c.GraphHandler.UpdateRevision)
 	editor.Delete("/revisions/:revision_id", c.GraphHandler.DeleteRevision)
 }

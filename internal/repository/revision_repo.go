@@ -414,6 +414,12 @@ func (r *revisionRepo) PublishDraft(ctx context.Context, venueID uuid.UUID, note
 	})
 }
 
+func (r *revisionRepo) UpdateRevision(ctx context.Context, revisionID uuid.UUID, note string) error {
+	return r.db.WithContext(ctx).Model(&entity.GraphRevision{}).
+		Where("id = ?", revisionID).
+		Update("note", note).Error
+}
+
 // --- QUERY BUILDER ---
 func (r *revisionRepo) buildFilterQuery(ctx context.Context, f models.FilterGraphRevision) *gorm.DB {
 	db := r.db.WithContext(ctx)

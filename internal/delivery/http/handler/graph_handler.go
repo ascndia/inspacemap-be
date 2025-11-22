@@ -275,6 +275,25 @@ func (h *GraphHandler) GetRevisionDetail(c *fiber.Ctx) error {
 	return utils.SendSuccess(c, detail)
 }
 
+// PUT /api/v1/editor/revisions/:revision_id
+func (h *GraphHandler) UpdateRevision(c *fiber.Ctx) error {
+	revisionID, err := uuid.Parse(c.Params("revision_id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid Revision ID")
+	}
+
+	var req models.UpdateRevisionRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.SendError(c, 400, "Invalid JSON")
+	}
+
+	if err := h.service.UpdateRevision(c.Context(), revisionID, req); err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+
+	return utils.SendSuccess(c, "Revision updated successfully")
+}
+
 // DELETE /api/v1/editor/revisions/:revision_id
 func (h *GraphHandler) DeleteRevision(c *fiber.Ctx) error {
 	revisionID, err := uuid.Parse(c.Params("revision_id"))

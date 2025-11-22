@@ -529,6 +529,21 @@ func (s *graphService) GetRevisionDetail(ctx context.Context, revisionID uuid.UU
 	}, nil
 }
 
+func (s *graphService) UpdateRevision(ctx context.Context, revisionID uuid.UUID, req models.UpdateRevisionRequest) error {
+	// Check if revision exists and is draft (only drafts can be updated)
+	revision, err := s.revisionRepo.GetByID(ctx, revisionID)
+	if err != nil {
+		return err
+	}
+
+	if revision.Status != entity.StatusDraft {
+		return errors.New("only draft revisions can be updated")
+	}
+
+	// Update the note
+	return s.revisionRepo.UpdateRevision(ctx, revisionID, req.Note)
+}
+
 func (s *graphService) DeleteRevision(ctx context.Context, revisionID uuid.UUID) error {
 	// Check if revision is draft (only drafts can be deleted)
 	revision, err := s.revisionRepo.GetByID(ctx, revisionID)

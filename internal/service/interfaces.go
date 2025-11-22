@@ -45,6 +45,7 @@ type GraphService interface {
 	CreateDraftRevision(ctx context.Context, venueID uuid.UUID) (*models.IDResponse, error)
 	ListRevisions(ctx context.Context, venueID uuid.UUID) ([]models.RevisionHistoryItem, error)
 	GetRevisionDetail(ctx context.Context, revisionID uuid.UUID) (*models.GraphRevisionDetail, error)
+	UpdateRevision(ctx context.Context, revisionID uuid.UUID, req models.UpdateRevisionRequest) error
 	DeleteRevision(ctx context.Context, revisionID uuid.UUID) error
 }
 

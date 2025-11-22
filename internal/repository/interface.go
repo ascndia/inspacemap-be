@@ -116,6 +116,8 @@ type GraphRevisionRepository interface {
 	GetByVenueID(ctx context.Context, venueID uuid.UUID) ([]entity.GraphRevision, error)
 	GetByOrganizationID(ctx context.Context, orgID uuid.UUID) ([]entity.GraphRevision, error)
 
+	UpdateRevision(ctx context.Context, revisionID uuid.UUID, note string) error
+
 	FilterGraphRevisions(ctx context.Context, filter models.FilterGraphRevision) ([]entity.GraphRevision, error)
 	PagedGraphRevisions(ctx context.Context, query models.QueryGraphRevision) ([]entity.GraphRevision, error)
 	CursorGraphRevisions(ctx context.Context, query models.CursorGraphRevisionQuery) ([]entity.GraphRevision, error)

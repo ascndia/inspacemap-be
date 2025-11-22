@@ -91,3 +91,7 @@ type CreateEdgeResponse struct {
 	Type      string    `json:"type"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type UpdateRevisionRequest struct {
+	Note string `json:"note" validate:"max=255"`
+}
