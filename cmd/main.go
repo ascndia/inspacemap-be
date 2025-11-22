@@ -49,12 +49,19 @@ func main() {
 	minioSecret := getEnv("MINIO_SECRET_KEY", "password_rahasia_banget")
 	minioRegion := getEnv("MINIO_REGION", "us-east-1")
 	minioBucket := getEnv("MINIO_BUCKET", "panoramas")
-	cdnURL := getEnv("CDN_BASE_URL", "http://localhost:9000/panoramas")
+
+	// CDN URL for accessing uploaded files (floor plans, panoramas)
+	appEnv := getEnv("APP_ENV", "production")
+	var cdnURL string
+	if appEnv == "development" {
+		cdnURL = getEnv("CDN_BASE_URL", "http://localhost:9002/panoramas")
+	} else {
+		cdnURL = getEnv("CDN_BASE_URL", "http://localhost:9000/panoramas")
+	}
 
 	// In development, use external endpoint for presigned URLs (frontend access)
 	// In production, internal and external endpoints are the same
 	var storageProvider service.StorageProvider
-	appEnv := getEnv("APP_ENV", "production")
 	if appEnv == "development" {
 		storageProvider = storage.NewMinIOProviderWithExternal(minioEndpoint, minioAccess, minioSecret, minioRegion, "http://localhost:9002")
 	} else {
