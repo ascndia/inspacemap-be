@@ -44,8 +44,6 @@ func main() {
 
 	auditRepo := repository.NewAuditRepository(db)
 
-	// 3. INIT EXTERNAL SERVICES (Infrastructure)
-	// Mengambil config dari Env
 	minioEndpoint := getEnv("MINIO_ENDPOINT", "http://localhost:9000")
 	minioAccess := getEnv("MINIO_ACCESS_KEY", "admin_inspacemap")
 	minioSecret := getEnv("MINIO_SECRET_KEY", "password_rahasia_banget")
@@ -53,7 +51,15 @@ func main() {
 	minioBucket := getEnv("MINIO_BUCKET", "panoramas")
 	cdnURL := getEnv("CDN_BASE_URL", "http://localhost:9000/panoramas")
 
-	storageProvider := storage.NewMinIOProvider(minioEndpoint, minioAccess, minioSecret, minioRegion)
+	// In development, use external endpoint for presigned URLs (frontend access)
+	// In production, internal and external endpoints are the same
+	var storageProvider service.StorageProvider
+	appEnv := getEnv("APP_ENV", "production")
+	if appEnv == "development" {
+		storageProvider = storage.NewMinIOProviderWithExternal(minioEndpoint, minioAccess, minioSecret, minioRegion, "http://localhost:9002")
+	} else {
+		storageProvider = storage.NewMinIOProvider(minioEndpoint, minioAccess, minioSecret, minioRegion)
+	}
 
 	// 4. INIT SERVICES (Business Logic Layer)
 	authService := service.NewAuthService(userRepo, orgRepo, orgMemberRepo, invitationRepo, roleRepo)

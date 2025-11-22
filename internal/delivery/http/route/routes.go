@@ -40,6 +40,9 @@ func (c *RouteConfig) Setup() {
 	media := tenant.Group("/media")
 	media.Post("/upload-init", c.MediaHandler.InitUpload)
 	media.Post("/confirm", c.MediaHandler.ConfirmUpload)
+	media.Get("/", c.MediaHandler.ListAssets)
+	media.Get("/:id", c.MediaHandler.GetAsset)
+	media.Delete("/:id", c.MediaHandler.DeleteAsset)
 
 	venues := tenant.Group("/venues")
 	venues.Post("/", c.VenueHandler.CreateVenue)
