@@ -253,7 +253,40 @@ func (s *graphService) GetEditorData(ctx context.Context, venueID uuid.UUID) (*m
 }
 
 func (s *graphService) PublishChanges(ctx context.Context, venueID uuid.UUID, req models.PublishDraftRequest) error {
-	// Panggil Repository untuk melakukan Deep Copy Transaction
+	// Get the draft to validate it has content
+	draft, err := s.revisionRepo.GetDraftByVenueID(ctx, venueID)
+	if err != nil {
+		return errors.New("no draft revision found to publish")
+	}
+
+	// Validate draft has at least one floor with nodes
+	floors, err := s.floorRepo.GetByGraphRevisionID(ctx, draft.ID)
+	if err != nil {
+		return err
+	}
+
+	if len(floors) == 0 {
+		return errors.New("cannot publish empty revision: no floors defined")
+	}
+
+	// Check if at least one floor has nodes
+	hasNodes := false
+	for _, floor := range floors {
+		nodeCount, err := s.graphRepo.CountNodesByFloorID(ctx, floor.ID)
+		if err != nil {
+			return err
+		}
+		if nodeCount > 0 {
+			hasNodes = true
+			break
+		}
+	}
+
+	if !hasNodes {
+		return errors.New("cannot publish empty revision: no navigation nodes defined")
+	}
+
+	// Proceed with publishing
 	return s.revisionRepo.PublishDraft(ctx, venueID, req.Note)
 }
 

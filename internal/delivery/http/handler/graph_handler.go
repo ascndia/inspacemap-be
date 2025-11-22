@@ -102,6 +102,16 @@ func (h *GraphHandler) CalibrateNode(c *fiber.Ctx) error {
 	return utils.SendSuccess(c, nil)
 }
 
+// DELETE /api/v1/editor/nodes/:id
+func (h *GraphHandler) DeleteNode(c *fiber.Ctx) error {
+	id, _ := uuid.Parse(c.Params("id"))
+
+	if err := h.service.DeleteNode(c.Context(), id); err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+	return utils.SendSuccess(c, "Node deleted successfully")
+}
+
 // --- EDGES ---
 
 // POST /api/v1/editor/connections
@@ -115,6 +125,27 @@ func (h *GraphHandler) ConnectNodes(c *fiber.Ctx) error {
 		return utils.SendError(c, 500, err.Error())
 	}
 	return utils.SendSuccess(c, nil)
+}
+
+// DELETE /api/v1/editor/connections
+func (h *GraphHandler) DeleteConnection(c *fiber.Ctx) error {
+	fromIDStr := c.Query("from_node_id")
+	toIDStr := c.Query("to_node_id")
+
+	fromID, err := uuid.Parse(fromIDStr)
+	if err != nil {
+		return utils.SendError(c, 400, "from_node_id query param required")
+	}
+
+	toID, err := uuid.Parse(toIDStr)
+	if err != nil {
+		return utils.SendError(c, 400, "to_node_id query param required")
+	}
+
+	if err := h.service.DeleteConnection(c.Context(), fromID, toID); err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+	return utils.SendSuccess(c, "Connection deleted successfully")
 }
 
 // --- PUBLISH ---
