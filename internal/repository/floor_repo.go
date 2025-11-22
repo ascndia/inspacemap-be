@@ -57,6 +57,34 @@ func (r *floorRepo) UpdateFloorMap(ctx context.Context, id uuid.UUID, mapImageID
 		Updates(updates).Error
 }
 
+func (r *floorRepo) UpdateFloor(ctx context.Context, id uuid.UUID, req models.UpdateFloorRequest) error {
+	updates := make(map[string]interface{})
+
+	if req.Name != "" {
+		updates["name"] = req.Name
+	}
+	if req.LevelIndex != 0 {
+		updates["level_index"] = req.LevelIndex
+	}
+	if req.MapImageID != nil {
+		updates["map_image_id"] = *req.MapImageID
+	}
+	if req.PixelsPerMeter != 0 {
+		updates["pixels_per_meter"] = req.PixelsPerMeter
+	}
+	if req.IsActive != nil {
+		updates["is_active"] = *req.IsActive
+	}
+
+	if len(updates) == 0 {
+		return nil // Nothing to update
+	}
+
+	return r.db.WithContext(ctx).Model(&entity.Floor{}).
+		Where("id = ?", id).
+		Updates(updates).Error
+}
+
 
 func (r *floorRepo) FilterFloors(ctx context.Context, filter models.FloorFilter) ([]entity.Floor, error) {
 	var floors []entity.Floor

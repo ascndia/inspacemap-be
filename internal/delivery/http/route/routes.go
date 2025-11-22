@@ -78,7 +78,12 @@ func (c *RouteConfig) Setup() {
 
 	editor.Get("/:venue_id", c.GraphHandler.GetEditorData)
 
+	
 	editor.Post("/floors", c.GraphHandler.CreateFloor)
+	editor.Get("/:venue_id/floors", c.GraphHandler.GetFloors)
+	editor.Get("/floors/:id", c.GraphHandler.GetFloor)
+	editor.Put("/floors/:id", c.GraphHandler.UpdateFloor)
+	editor.Delete("/floors/:id", c.GraphHandler.DeleteFloor)
 
 	editor.Post("/nodes", c.GraphHandler.CreateNode)
 	editor.Put("/nodes/:id/position", c.GraphHandler.UpdateNodePosition)

@@ -57,6 +57,69 @@ func (h *GraphHandler) CreateFloor(c *fiber.Ctx) error {
 	return utils.SendCreated(c, resp)
 }
 
+// PUT /api/v1/editor/floors/:id
+func (h *GraphHandler) UpdateFloor(c *fiber.Ctx) error {
+	floorID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid Floor ID")
+	}
+
+	var req models.UpdateFloorRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.SendError(c, 400, "Invalid JSON")
+	}
+
+	if err := h.service.UpdateFloor(c.Context(), floorID, req); err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+
+	return utils.SendSuccess(c, "Floor updated successfully")
+}
+
+// DELETE /api/v1/editor/floors/:id
+func (h *GraphHandler) DeleteFloor(c *fiber.Ctx) error {
+	floorID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid Floor ID")
+	}
+
+	if err := h.service.DeleteFloor(c.Context(), floorID); err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+
+	return utils.SendSuccess(c, "Floor deleted successfully")
+}
+
+// GET /api/v1/editor/floors/:id
+func (h *GraphHandler) GetFloor(c *fiber.Ctx) error {
+	floorID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid Floor ID")
+	}
+
+	floor, err := h.service.GetFloor(c.Context(), floorID)
+	if err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+
+	return utils.SendSuccess(c, floor)
+}
+
+// GET /api/v1/editor/:venue_id/floors
+func (h *GraphHandler) GetFloors(c *fiber.Ctx) error {
+	venueID, err := uuid.Parse(c.Params("venue_id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid Venue ID")
+	}
+
+	floors, err := h.service.GetFloors(c.Context(), venueID)
+	if err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+
+	return utils.SendSuccess(c, floors)
+}
+
 // --- NODES ---
 
 // POST /api/v1/editor/nodes
@@ -121,10 +184,11 @@ func (h *GraphHandler) ConnectNodes(c *fiber.Ctx) error {
 		return utils.SendError(c, 400, "Invalid JSON")
 	}
 
-	if err := h.service.ConnectNodes(c.Context(), req); err != nil {
+	resp, err := h.service.ConnectNodes(c.Context(), req)
+	if err != nil {
 		return utils.SendError(c, 500, err.Error())
 	}
-	return utils.SendSuccess(c, nil)
+	return utils.SendCreated(c, resp)
 }
 
 // DELETE /api/v1/editor/connections

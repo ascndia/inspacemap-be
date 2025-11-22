@@ -27,9 +27,13 @@ type RoleService interface {
 }
 
 type GraphService interface {
-	CreateNode(ctx context.Context, req models.CreateNodeRequest) (*models.IDResponse, error)
+	CreateNode(ctx context.Context, req models.CreateNodeRequest) (*models.CreateNodeResponse, error)
 	CreateFloor(ctx context.Context, venueID uuid.UUID, req models.CreateFloorRequest) (*models.IDResponse, error)
-	ConnectNodes(ctx context.Context, req models.ConnectNodesRequest) error
+	UpdateFloor(ctx context.Context, floorID uuid.UUID, req models.UpdateFloorRequest) error
+	DeleteFloor(ctx context.Context, floorID uuid.UUID) error
+	GetFloor(ctx context.Context, floorID uuid.UUID) (*models.FloorAdminDetail, error)
+	GetFloors(ctx context.Context, venueID uuid.UUID) ([]models.FloorAdminDetail, error)
+	ConnectNodes(ctx context.Context, req models.ConnectNodesRequest) (*models.CreateEdgeResponse, error)
 	UpdateNodePosition(ctx context.Context, nodeID uuid.UUID, req models.UpdateNodePositionRequest) error
 	UpdateNodeCalibration(ctx context.Context, nodeID uuid.UUID, req models.UpdateNodeCalibrationRequest) error
 	DeleteNode(ctx context.Context, nodeID uuid.UUID) error

@@ -149,6 +149,7 @@ type FloorRepository interface {
 	GetByVenueID(ctx context.Context, venueID uuid.UUID) ([]entity.Floor, error)
 	GetByGraphRevisionID(ctx context.Context, revisionID uuid.UUID) ([]entity.Floor, error)
 	UpdateFloorMap(ctx context.Context, id uuid.UUID, mapImageID *uuid.UUID, pixelsPerMeter float64) error
+	UpdateFloor(ctx context.Context, id uuid.UUID, req models.UpdateFloorRequest) error
 	FilterFloors(ctx context.Context, filter models.FloorFilter) ([]entity.Floor, error)
 	PagedFloors(ctx context.Context, query models.FloorQuery) ([]entity.Floor, int64, error)
 	CursorFloors(ctx context.Context, query models.FloorQueryCursor) ([]entity.Floor, string, error)

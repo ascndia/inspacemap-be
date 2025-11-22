@@ -72,3 +72,22 @@ type ConnectNodesRequest struct {
 	FromNodeID uuid.UUID `json:"from_node_id" validate:"required"`
 	ToNodeID   uuid.UUID `json:"to_node_id" validate:"required"`
 }
+
+type CreateNodeResponse struct {
+	ID        uuid.UUID `json:"id"`
+	FloorID   uuid.UUID `json:"floor_id"`
+	X         float64   `json:"x"`
+	Y         float64   `json:"y"`
+	Label     string    `json:"label"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type CreateEdgeResponse struct {
+	ID        uuid.UUID `json:"id"`
+	FromNodeID uuid.UUID `json:"from_node_id"`
+	ToNodeID   uuid.UUID `json:"to_node_id"`
+	Heading   float64   `json:"heading"`
+	Distance  float64   `json:"distance"`
+	Type      string    `json:"type"`
+	CreatedAt time.Time `json:"created_at"`
+}
