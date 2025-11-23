@@ -150,7 +150,11 @@ func (s *venueService) ListVenues(ctx context.Context, query models.VenueQuery) 
 	for _, v := range venues {
 		coverURL := ""
 		if v.CoverImage != nil {
-			coverURL = v.CoverImage.ThumbnailURL
+			if v.CoverImage.ThumbnailURL != "" {
+				coverURL = v.CoverImage.ThumbnailURL
+			} else {
+				coverURL = v.CoverImage.PublicURL
+			}
 		}
 
 		list = append(list, models.VenueListItem{
