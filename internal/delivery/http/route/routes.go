@@ -48,6 +48,7 @@ func (c *RouteConfig) Setup() {
 	venues.Post("/", c.VenueHandler.CreateVenue)
 	venues.Get("/", c.VenueHandler.ListVenues)
 	venues.Get("/:id", c.VenueHandler.GetDetail)
+	venues.Put("/:id", c.VenueHandler.UpdateVenue)
 
 	// Venue Gallery endpoints
 	venues.Post("/:id/gallery", c.VenueGalleryHandler.AddItems)

@@ -65,6 +65,26 @@ func (h *VenueHandler) GetDetail(c *fiber.Ctx) error {
 	return utils.SendSuccess(c, detail)
 }
 
+// PUT /api/v1/venues/:id (Admin Update)
+func (h *VenueHandler) UpdateVenue(c *fiber.Ctx) error {
+	idStr := c.Params("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid UUID")
+	}
+
+	var req models.UpdateVenueRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.SendError(c, 400, "Invalid JSON")
+	}
+
+	if err := h.service.UpdateVenue(c.Context(), id, req); err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+
+	return utils.SendSuccess(c, "Venue updated successfully")
+}
+
 // GET /api/v1/venues (Admin List)
 func (h *VenueHandler) ListVenues(c *fiber.Ctx) error {
 	// Default values
