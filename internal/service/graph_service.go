@@ -15,6 +15,7 @@ type graphService struct {
 	revisionRepo repository.GraphRevisionRepository
 	floorRepo    repository.FloorRepository
 	venueRepo    repository.VenueRepository
+	mediaRepo    repository.MediaAssetRepository
 }
 
 func NewGraphService(
@@ -22,12 +23,14 @@ func NewGraphService(
 	rRepo repository.GraphRevisionRepository,
 	fRepo repository.FloorRepository,
 	vRepo repository.VenueRepository,
+	mRepo repository.MediaAssetRepository,
 ) GraphService {
 	return &graphService{
 		graphRepo:    gRepo,
 		revisionRepo: rRepo,
 		floorRepo:    fRepo,
 		venueRepo:    vRepo,
+		mediaRepo:    mRepo,
 	}
 }
 
@@ -260,6 +263,23 @@ func (s *graphService) UpdateNodeCalibration(ctx context.Context, nodeID uuid.UU
 	return s.graphRepo.UpdateNodeCalibration(ctx, nodeID, req.RotationOffset)
 }
 
+func (s *graphService) UpdateNode(ctx context.Context, nodeID uuid.UUID, req models.UpdateNodeRequest) error {
+	// Validate that at least one field is provided
+	if req.X == nil && req.Y == nil && req.PanoramaAssetID == nil && req.Label == nil && req.RotationOffset == nil {
+		return errors.New("at least one field must be provided for update")
+	}
+
+	// Validate panorama asset exists if provided
+	if req.PanoramaAssetID != nil {
+		_, err := s.mediaRepo.GetByID(ctx, *req.PanoramaAssetID)
+		if err != nil {
+			return errors.New("panorama asset not found")
+		}
+	}
+
+	return s.graphRepo.UpdateNode(ctx, nodeID, req)
+}
+
 func (s *graphService) DeleteNode(ctx context.Context, nodeID uuid.UUID) error {
 	return s.graphRepo.DeleteNode(ctx, nodeID)
 }
@@ -358,7 +378,11 @@ func (s *graphService) GetEditorData(ctx context.Context, venueID uuid.UUID) (*m
 			// Resolve Panorama URL (Safety check jika asset terhapus)
 			panoURL := ""
 			if node.Panorama != nil {
-				panoURL = node.Panorama.ThumbnailURL // Gunakan thumbnail untuk editor agar ringan!
+				if node.Panorama.ThumbnailURL != "" {
+					panoURL = node.Panorama.ThumbnailURL // Gunakan thumbnail untuk editor agar ringan!
+				} else {
+					panoURL = node.Panorama.PublicURL // Fallback ke public URL jika thumbnail belum ada
+				}
 			}
 
 			nodeDTOs = append(nodeDTOs, models.NodeData{

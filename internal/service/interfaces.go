@@ -36,6 +36,7 @@ type GraphService interface {
 	ConnectNodes(ctx context.Context, req models.ConnectNodesRequest) (*models.CreateEdgeResponse, error)
 	UpdateNodePosition(ctx context.Context, nodeID uuid.UUID, req models.UpdateNodePositionRequest) error
 	UpdateNodeCalibration(ctx context.Context, nodeID uuid.UUID, req models.UpdateNodeCalibrationRequest) error
+	UpdateNode(ctx context.Context, nodeID uuid.UUID, req models.UpdateNodeRequest) error
 	DeleteNode(ctx context.Context, nodeID uuid.UUID) error
 	DeleteConnection(ctx context.Context, fromID, toID uuid.UUID) error
 	GetEditorData(ctx context.Context, venueID uuid.UUID) (*models.ManifestResponse, error)

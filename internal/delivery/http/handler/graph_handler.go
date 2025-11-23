@@ -166,6 +166,25 @@ func (h *GraphHandler) CalibrateNode(c *fiber.Ctx) error {
 	return utils.SendSuccess(c, nil)
 }
 
+// PUT /api/v1/editor/nodes/:id
+func (h *GraphHandler) UpdateNode(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid Node ID")
+	}
+
+	var req models.UpdateNodeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.SendError(c, 400, "Invalid JSON")
+	}
+
+	if err := h.service.UpdateNode(c.Context(), id, req); err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+
+	return utils.SendSuccess(c, "Node updated successfully")
+}
+
 // DELETE /api/v1/editor/nodes/:id
 func (h *GraphHandler) DeleteNode(c *fiber.Ctx) error {
 	id, _ := uuid.Parse(c.Params("id"))

@@ -72,7 +72,7 @@ func main() {
 	authService := service.NewAuthService(userRepo, orgRepo, orgMemberRepo, invitationRepo, roleRepo)
 	mediaService := service.NewMediaService(mediaRepo, storageProvider, minioBucket, cdnURL)
 	areaService := service.NewAreaService(areaRepo, areaGalleryRepo, graphRepo)
-	graphService := service.NewGraphService(graphRepo, revisionRepo, floorRepo, venueRepo)
+	graphService := service.NewGraphService(graphRepo, revisionRepo, floorRepo, venueRepo, mediaRepo)
 	venueService := service.NewVenueService(venueRepo)
 	teamService := service.NewTeamService(userRepo, invitationRepo, orgMemberRepo, roleRepo)
 	roleService := service.NewRoleService(roleRepo, permRepo)

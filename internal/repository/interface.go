@@ -95,6 +95,7 @@ type GraphRepository interface {
 	CreateNode(ctx context.Context, node *entity.GraphNode) error
 	UpdateNodePosition(ctx context.Context, id uuid.UUID, x, y float64) error
 	UpdateNodeCalibration(ctx context.Context, id uuid.UUID, offset float64) error
+	UpdateNode(ctx context.Context, id uuid.UUID, req models.UpdateNodeRequest) error
 	DeleteNode(ctx context.Context, id uuid.UUID) error
 	ConnectNodes(ctx context.Context, edge *entity.GraphEdge) error
 	DeleteEdge(ctx context.Context, fromID, toID uuid.UUID) error

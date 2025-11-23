@@ -59,6 +59,14 @@ type UpdateNodeCalibrationRequest struct {
 	RotationOffset float64 `json:"rotation_offset" validate:"required"` 
 }
 
+type UpdateNodeRequest struct {
+	X                *float64   `json:"x,omitempty"`
+	Y                *float64   `json:"y,omitempty"`
+	PanoramaAssetID  *uuid.UUID `json:"panorama_asset_id,omitempty"`
+	Label            *string    `json:"label,omitempty"`
+	RotationOffset   *float64   `json:"rotation_offset,omitempty"`
+}
+
 type NodeAdminItem struct {
 	ID             uuid.UUID      `json:"id"`
 	Label          string    `json:"label"`

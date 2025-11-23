@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"inspacemap/backend/internal/entity"
+	"inspacemap/backend/internal/models"
 	"math"
 
 	"github.com/google/uuid"
@@ -31,6 +32,34 @@ func (r *graphRepo) UpdateNodeCalibration(ctx context.Context, id uuid.UUID, off
 	return r.db.WithContext(ctx).Model(&entity.GraphNode{}).
 		Where("id = ?", id).
 		Update("rotation_offset", offset).Error
+}
+
+func (r *graphRepo) UpdateNode(ctx context.Context, id uuid.UUID, req models.UpdateNodeRequest) error {
+	updates := make(map[string]interface{})
+	
+	if req.X != nil {
+		updates["x"] = *req.X
+	}
+	if req.Y != nil {
+		updates["y"] = *req.Y
+	}
+	if req.PanoramaAssetID != nil {
+		updates["panorama_asset_id"] = *req.PanoramaAssetID
+	}
+	if req.Label != nil {
+		updates["label"] = *req.Label
+	}
+	if req.RotationOffset != nil {
+		updates["rotation_offset"] = *req.RotationOffset
+	}
+	
+	if len(updates) == 0 {
+		return nil // No updates to make
+	}
+	
+	return r.db.WithContext(ctx).Model(&entity.GraphNode{}).
+		Where("id = ?", id).
+		Updates(updates).Error
 }
 
 func (r *graphRepo) DeleteNode(ctx context.Context, id uuid.UUID) error {

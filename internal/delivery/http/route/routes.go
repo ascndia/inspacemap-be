@@ -88,6 +88,7 @@ func (c *RouteConfig) Setup() {
 	editor.Post("/nodes", c.GraphHandler.CreateNode)
 	editor.Put("/nodes/:id/position", c.GraphHandler.UpdateNodePosition)
 	editor.Put("/nodes/:id/calibration", c.GraphHandler.CalibrateNode)
+	editor.Put("/nodes/:id", c.GraphHandler.UpdateNode)
 	editor.Delete("/nodes/:id", c.GraphHandler.DeleteNode)
 
 	editor.Post("/connections", c.GraphHandler.ConnectNodes)
