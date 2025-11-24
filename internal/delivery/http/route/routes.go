@@ -102,4 +102,8 @@ func (c *RouteConfig) Setup() {
 	editor.Get("/revisions/:revision_id", c.GraphHandler.GetRevisionDetail)
 	editor.Put("/revisions/:revision_id", c.GraphHandler.UpdateRevision)
 	editor.Delete("/revisions/:revision_id", c.GraphHandler.DeleteRevision)
+
+	// Cloning a revision
+	editor.Post("/revisions/clone", c.GraphHandler.CloneRevision)
+
 }

@@ -48,7 +48,7 @@ type GraphService interface {
 	GetRevisionDetail(ctx context.Context, revisionID uuid.UUID) (*models.GraphRevisionDetail, error)
 	UpdateRevision(ctx context.Context, revisionID uuid.UUID, req models.UpdateRevisionRequest) error
 	DeleteRevision(ctx context.Context, revisionID uuid.UUID) error
-	DeepCopyRevision(ctx context.Context, sourceRevisionID, targetVenueID uuid.UUID, note string) (*models.IDResponse, error)
+	DeepCopyRevision(ctx context.Context, sourceRevisionID, targetVenueID uuid.UUID, note string) (*models.DeepCopyRevisionResponse, error)
 }
 
 type OrganizationService interface {

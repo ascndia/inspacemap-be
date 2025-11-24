@@ -39,3 +39,11 @@ type DeepCopyRevisionRequest struct {
 	TargetVenueID    uuid.UUID `json:"target_venue_id" validate:"required"`
 	Note             string    `json:"note"`
 }
+
+type DeepCopyRevisionResponse struct {
+	NewRevisionID uuid.UUID      `json:"new_revision_id"`
+	Note          string         `json:"note"`
+	Status        RevisionStatus `json:"status"`
+	CreatedAt     string         `json:"created_at"`
+	CreatedBy     string         `json:"created_by"`
+}

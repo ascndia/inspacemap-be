@@ -7,6 +7,7 @@ import (
 	"inspacemap/backend/internal/entity"
 	"inspacemap/backend/internal/models"
 	"inspacemap/backend/internal/repository"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
@@ -622,7 +623,7 @@ func (s *graphService) DeleteRevision(ctx context.Context, revisionID uuid.UUID)
 	return s.revisionRepo.Delete(ctx, revisionID)
 }
 
-func (s *graphService) DeepCopyRevision(ctx context.Context, sourceRevisionID, targetVenueID uuid.UUID, note string) (*models.IDResponse, error) {
+func (s *graphService) DeepCopyRevision(ctx context.Context, sourceRevisionID, targetVenueID uuid.UUID, note string) (*models.DeepCopyRevisionResponse, error) {
 	// Get source revision
 	source, err := s.revisionRepo.GetByID(ctx, sourceRevisionID)
 	if err != nil {
@@ -732,5 +733,11 @@ func (s *graphService) DeepCopyRevision(ctx context.Context, sourceRevisionID, t
 		}
 	}
 
-	return &models.IDResponse{ID: newRevision.ID}, nil
+	return &models.DeepCopyRevisionResponse{
+		NewRevisionID: newRevision.ID,
+		Note:          newRevision.Note,
+		Status:        models.RevisionStatus(newRevision.Status),
+		CreatedAt:     newRevision.BaseEntity.CreatedAt.Format(time.RFC3339),
+		CreatedBy:     newRevision.CreatedByID.String(),
+	}, nil
 }
