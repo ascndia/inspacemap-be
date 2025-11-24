@@ -21,6 +21,7 @@ services:
       # Jadi kita harus ganti host-nya menjadi nama service tetangga.
       - DB_HOST=db_dev
       - MINIO_ENDPOINT=http://minio_dev:9000
+      - REDIS_ADDR=redis_dev:6379
       - APP_ENV=development # Enable dev seeding with sample data
 
   # ==========================================
@@ -81,7 +82,21 @@ services:
       mc mb myminio/panoramas --ignore-existing &&
       mc policy set public myminio/panoramas
 
+  # ==========================================
+  # 4. REDIS (CACHING) - DEV
+  # ==========================================
+  redis_dev:
+    image: redis:7-alpine
+    container_name: inspacemap_redis_dev
+    restart: always
+    ports:
+      - "6379:6379" # Expose port untuk akses dari host (development)
+    volumes:
+      - redis_dev_data:/data # Persist data Redis
+    command: redis-server --appendonly yes
+
 # Definisi Volume (Folder penyimpanan data)
 volumes:
   postgres_dev_data:
   minio_dev_data:
+  redis_dev_data:

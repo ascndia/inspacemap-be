@@ -25,6 +25,7 @@ func NewVenueRepository(db *gorm.DB) VenueRepository {
 func (r *venueRepo) GetByID(ctx context.Context, id uuid.UUID) (*entity.Venue, error) {
 	var venue entity.Venue
 	err := r.db.WithContext(ctx).
+		Preload("Organization").
 		Preload("CoverImage").
 		Preload("Gallery.MediaAsset").
 		Preload("PointsOfInterest"). // Load Area/POI

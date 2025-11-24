@@ -2,21 +2,27 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"inspacemap/backend/internal/entity"
 	"inspacemap/backend/internal/models"
 	"inspacemap/backend/internal/repository"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 type venueService struct {
 	venueRepo repository.VenueRepository
+	redis     *redis.Client
 }
 
-func NewVenueService(vRepo repository.VenueRepository) VenueService {
+func NewVenueService(vRepo repository.VenueRepository, redisClient *redis.Client) VenueService {
 	return &venueService{
 		venueRepo: vRepo,
+		redis:     redisClient,
 	}
 }
 
@@ -176,6 +182,17 @@ func (s *venueService) ListVenues(ctx context.Context, query models.VenueQuery) 
 // =================================================================
 
 func (s *venueService) GetMobileManifest(ctx context.Context, orgSlug, venueSlug string) (*models.MobileManifest, error) {
+	cacheKey := fmt.Sprintf("manifest:%s:%s", orgSlug, venueSlug)
+
+	// Cek cache
+	if cached, err := s.redis.Get(ctx, cacheKey).Result(); err == nil {
+		var manifest models.MobileManifest
+		if json.Unmarshal([]byte(cached), &manifest) == nil {
+			return &manifest, nil
+		}
+	}
+
+	// Fetch dari DB
 	venueEntity, err := s.venueRepo.GetLiveManifestData(ctx, orgSlug, venueSlug)
 	if err != nil {
 		return nil, err
@@ -266,7 +283,7 @@ func (s *venueService) GetMobileManifest(ctx context.Context, orgSlug, venueSlug
 		coverURL = venueEntity.CoverImage.PublicURL
 	}
 
-	return &models.MobileManifest{
+	manifest := &models.MobileManifest{
 		VenueID:       venueEntity.ID,
 		VenueName:     venueEntity.Name,
 		Slug:          venueEntity.Slug,
@@ -281,7 +298,13 @@ func (s *venueService) GetMobileManifest(ctx context.Context, orgSlug, venueSlug
 		LastUpdated:   venueEntity.LiveRevision.CreatedAt,
 		StartNodeID:   startNodeID,
 		Floors:        floorDTOs,
-	}, nil
+	}
+
+	// Set cache
+	data, _ := json.Marshal(manifest)
+	s.redis.Set(ctx, cacheKey, data, time.Hour)
+
+	return manifest, nil
 }
 
 func (s *venueService) mapEntityToDetail(venue *entity.Venue) *models.VenueDetail {

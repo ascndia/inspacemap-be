@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -24,7 +25,9 @@ type VenueServiceTestSuite struct {
 func (suite *VenueServiceTestSuite) SetupTest() {
 	suite.ctrl = gomock.NewController(suite.T())
 	suite.venueRepo = NewMockVenueRepository(suite.ctrl)
-	suite.service = service.NewVenueService(suite.venueRepo)
+	// Mock Redis client for testing
+	redisClient := redis.NewClient(&redis.Options{})
+	suite.service = service.NewVenueService(suite.venueRepo, redisClient)
 }
 
 func (suite *VenueServiceTestSuite) TearDownTest() {

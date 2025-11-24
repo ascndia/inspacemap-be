@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -22,6 +24,24 @@ func main() {
 	// Pastikan .env atau environment variables sudah diset
 	config.ConnectDB()
 	db := config.DB
+
+	// 2. INIT REDIS
+	redisAddr := getEnv("REDIS_ADDR", "localhost:6379")
+	redisPassword := getEnv("REDIS_PASSWORD", "")
+	redisDB := 0 // Default DB
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     redisAddr,
+		Password: redisPassword,
+		DB:       redisDB,
+	})
+	defer redisClient.Close()
+
+	// Test Redis connection (optional)
+	if _, err := redisClient.Ping(context.Background()).Result(); err != nil {
+		log.Printf("ℹ️  Redis not available: %v (caching disabled)", err)
+	} else {
+		log.Println("✅ Redis connected")
+	}
 
 	// 2. INIT REPOSITORIES (Data Access Layer)
 	userRepo := repository.NewUserRepository(db)
@@ -72,8 +92,8 @@ func main() {
 	authService := service.NewAuthService(userRepo, orgRepo, orgMemberRepo, invitationRepo, roleRepo)
 	mediaService := service.NewMediaService(mediaRepo, storageProvider, minioBucket, cdnURL)
 	areaService := service.NewAreaService(areaRepo, areaGalleryRepo, graphRepo)
-	graphService := service.NewGraphService(graphRepo, revisionRepo, floorRepo, venueRepo, mediaRepo)
-	venueService := service.NewVenueService(venueRepo)
+	graphService := service.NewGraphService(graphRepo, revisionRepo, floorRepo, venueRepo, mediaRepo, redisClient)
+	venueService := service.NewVenueService(venueRepo, redisClient)
 	teamService := service.NewTeamService(userRepo, invitationRepo, orgMemberRepo, roleRepo)
 	roleService := service.NewRoleService(roleRepo, permRepo)
 	venueGalleryService := service.NewVenueGalleryService(venueGalleryRepo)

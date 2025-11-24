@@ -3,11 +3,13 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"inspacemap/backend/internal/entity"
 	"inspacemap/backend/internal/models"
 	"inspacemap/backend/internal/repository"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 type graphService struct {
@@ -16,6 +18,7 @@ type graphService struct {
 	floorRepo    repository.FloorRepository
 	venueRepo    repository.VenueRepository
 	mediaRepo    repository.MediaAssetRepository
+	redis        *redis.Client
 }
 
 func NewGraphService(
@@ -24,6 +27,7 @@ func NewGraphService(
 	fRepo repository.FloorRepository,
 	vRepo repository.VenueRepository,
 	mRepo repository.MediaAssetRepository,
+	redisClient *redis.Client,
 ) GraphService {
 	return &graphService{
 		graphRepo:    gRepo,
@@ -31,6 +35,7 @@ func NewGraphService(
 		floorRepo:    fRepo,
 		venueRepo:    vRepo,
 		mediaRepo:    mRepo,
+		redis:        redisClient,
 	}
 }
 
@@ -312,13 +317,13 @@ func (s *graphService) ConnectNodes(ctx context.Context, req models.ConnectNodes
 	}
 
 	return &models.CreateEdgeResponse{
-		ID:        edge.ID,
+		ID:         edge.ID,
 		FromNodeID: edge.FromNodeID,
 		ToNodeID:   edge.ToNodeID,
-		Heading:   edge.Heading,
-		Distance:  edge.Distance,
-		Type:      edge.Type,
-		CreatedAt: edge.CreatedAt,
+		Heading:    edge.Heading,
+		Distance:   edge.Distance,
+		Type:       edge.Type,
+		CreatedAt:  edge.CreatedAt,
 	}, nil
 }
 
@@ -471,7 +476,21 @@ func (s *graphService) PublishChanges(ctx context.Context, revisionID uuid.UUID,
 	}
 
 	// Proceed with publishing
-	return s.revisionRepo.PublishDraft(ctx, revisionID, req.Note)
+	if err := s.revisionRepo.PublishDraft(ctx, revisionID, req.Note); err != nil {
+		return err
+	}
+
+	// Invalidate cache for the venue
+	venue, err := s.venueRepo.GetByID(ctx, draft.VenueID)
+	if err != nil {
+		// Log error but don't fail the publish
+		return nil
+	}
+
+	cacheKey := fmt.Sprintf("manifest:%s:%s", venue.Organization.Slug, venue.Slug)
+	s.redis.Del(ctx, cacheKey)
+
+	return nil
 }
 
 // =================================================================

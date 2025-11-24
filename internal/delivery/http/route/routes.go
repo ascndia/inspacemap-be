@@ -79,7 +79,6 @@ func (c *RouteConfig) Setup() {
 
 	editor.Get("/:venue_id", c.GraphHandler.GetEditorData)
 
-	
 	editor.Post("/floors", c.GraphHandler.CreateFloor)
 	editor.Get("/:venue_id/floors", c.GraphHandler.GetFloors)
 	editor.Get("/floors/:id", c.GraphHandler.GetFloor)
