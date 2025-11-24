@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
@@ -66,6 +67,14 @@ func main() {
 		storageProvider = storage.NewMinIOProviderWithExternal(minioEndpoint, minioAccess, minioSecret, minioRegion, "http://localhost:9002")
 	} else {
 		storageProvider = storage.NewMinIOProvider(minioEndpoint, minioAccess, minioSecret, minioRegion)
+	}
+
+	// Create bucket and set public policy
+	if err := storageProvider.CreateBucket(context.Background(), minioBucket); err != nil {
+		log.Fatalf("Failed to create bucket: %v", err)
+	}
+	if err := storageProvider.SetBucketPublicReadOnly(context.Background(), minioBucket); err != nil {
+		log.Fatalf("Failed to set bucket policy: %v", err)
 	}
 
 	// 4. INIT SERVICES (Business Logic Layer)

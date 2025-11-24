@@ -61,6 +61,8 @@ type OrganizationService interface {
 type StorageProvider interface {
 	GetPresignedPutURL(ctx context.Context, bucket, key, contentType string, expiry time.Duration) (string, error)
 	DeleteObject(ctx context.Context, bucket, key string) error
+	CreateBucket(ctx context.Context, bucketName string) error
+	SetBucketPublicReadOnly(ctx context.Context, bucketName string) error
 }
 
 type MediaService interface {

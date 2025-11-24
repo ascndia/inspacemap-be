@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
@@ -103,6 +105,44 @@ func (m *MinIOProvider) DeleteObject(ctx context.Context, bucket, key string) er
 	_, err := m.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
+	})
+	return err
+}
+
+// CreateBucket membuat bucket baru jika belum ada
+func (m *MinIOProvider) CreateBucket(ctx context.Context, bucketName string) error {
+	_, err := m.client.CreateBucket(ctx, &s3.CreateBucketInput{
+		Bucket: aws.String(bucketName),
+	})
+	if err != nil {
+		// Bucket mungkin sudah ada, abaikan error jika sudah ada
+		var bne *s3types.BucketAlreadyExists
+		var bno *s3types.BucketAlreadyOwnedByYou
+		if errors.As(err, &bne) || errors.As(err, &bno) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+// SetBucketPublicReadOnly mengatur bucket agar bisa diakses publik untuk read-only
+func (m *MinIOProvider) SetBucketPublicReadOnly(ctx context.Context, bucketName string) error {
+	policy := fmt.Sprintf(`{
+		"Version": "2012-10-17",
+		"Statement": [
+			{
+				"Effect": "Allow",
+				"Principal": "*",
+				"Action": "s3:GetObject",
+				"Resource": "arn:aws:s3:::%s/*"
+			}
+		]
+	}`, bucketName)
+
+	_, err := m.client.PutBucketPolicy(ctx, &s3.PutBucketPolicyInput{
+		Bucket: aws.String(bucketName),
+		Policy: aws.String(policy),
 	})
 	return err
 }
