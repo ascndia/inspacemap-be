@@ -6,22 +6,22 @@ import (
 
 type Venue struct {
 	BaseEntity
-	OrganizationID   uuid.UUID        `gorm:"index;not null"`
-	Organization     Organization     `gorm:"foreignKey:OrganizationID"`
-	Name             string           `gorm:"type:varchar(100);not null"`
-	Slug             string           `gorm:"type:varchar(100);index"`
-	Description      string           `gorm:"type:text"`
-	Address          string           `gorm:"type:text"`
-	City             string           `gorm:"type:varchar(100)"`
-	Province         string           `gorm:"type:varchar(100)"`
-	PostalCode       string           `gorm:"type:varchar(20)"`
-	Visibility       VisibilityStatus `gorm:"type:varchar(20);default:'private'"`
-	Latitude         float64          `gorm:"type:decimal(10,8);index"`
-	Longitude        float64          `gorm:"type:decimal(11,8);index"`
-	LiveRevisionID   uuid.UUID        `gorm:"index;not null"`
-	LiveRevision     *GraphRevision   `gorm:"foreignKey:LiveRevisionID"`
-	DraftRevisionID  *uuid.UUID       `gorm:"index"`
-	DraftRevision    *GraphRevision   `gorm:"foreignKey:DraftRevisionID"`
+	OrganizationID uuid.UUID        `gorm:"index;not null"`
+	Organization   Organization     `gorm:"foreignKey:OrganizationID"`
+	Name           string           `gorm:"type:varchar(100);not null"`
+	Slug           string           `gorm:"type:varchar(100);index"`
+	Description    string           `gorm:"type:text"`
+	Address        string           `gorm:"type:text"`
+	City           string           `gorm:"type:varchar(100)"`
+	Province       string           `gorm:"type:varchar(100)"`
+	PostalCode     string           `gorm:"type:varchar(20)"`
+	Visibility     VisibilityStatus `gorm:"type:varchar(20);default:'private'"`
+	Latitude       float64          `gorm:"type:decimal(10,8);index"`
+	Longitude      float64          `gorm:"type:decimal(11,8);index"`
+	LiveRevisionID uuid.UUID        `gorm:"index;not null"`
+	LiveRevision   *GraphRevision   `gorm:"foreignKey:LiveRevisionID"`
+	// DraftRevisionID  *uuid.UUID       `gorm:"index"` // Removed for multiple drafts support
+	// DraftRevision    *GraphRevision   `gorm:"foreignKey:DraftRevisionID"` // Removed
 	CoverImageID     *uuid.UUID
 	CoverImage       *MediaAsset        `gorm:"foreignKey:CoverImageID"`
 	Gallery          []VenueGalleryItem `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`

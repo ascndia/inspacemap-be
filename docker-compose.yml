@@ -64,7 +64,19 @@ services:
       timeout: 20s
       retries: 3
 
+  # ==========================================
+  # 4. REDIS (CACHING)
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    container_name: inspacemap_redis
+    restart: always
+    volumes:
+      - redis_data:/data # Persist data Redis
+    command: redis-server --appendonly yes
+
 # Definisi Volume (Folder penyimpanan data)
 volumes:
   postgres_data:
   minio_data:
+  redis_data:

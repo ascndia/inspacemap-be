@@ -33,14 +33,16 @@ func (h *VenueHandler) CreateVenue(c *fiber.Ctx) error {
 	return utils.SendCreated(c, resp)
 }
 
-// GET /api/v1/venues/:slug/manifest (Mobile App Read)
+// GET /api/v1/venues/:orgSlug/:venueSlug/manifest (Mobile App Read)
 func (h *VenueHandler) GetManifest(c *fiber.Ctx) error {
-	slug := c.Params("slug")
-	if slug == "" {
-		return utils.SendError(c, 400, "Slug is required")
+	orgSlug := c.Params("orgSlug")
+	venueSlug := c.Params("venueSlug")
+
+	if orgSlug == "" || venueSlug == "" {
+		return utils.SendError(c, 400, "Org slug and venue slug are required")
 	}
 
-	manifest, err := h.service.GetMobileManifest(c.Context(), slug)
+	manifest, err := h.service.GetMobileManifest(c.Context(), orgSlug, venueSlug)
 	if err != nil {
 		return utils.SendError(c, 404, "Venue not found or not published")
 	}

@@ -8,8 +8,9 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
 type userRepo struct {
-	BaseRepository[entity.User, uuid.UUID] 
+	BaseRepository[entity.User, uuid.UUID]
 	db *gorm.DB
 }
 
@@ -26,9 +27,10 @@ func (r *userRepo) GetByEmail(ctx context.Context, email string) (*entity.User, 
 		Preload("Memberships").
 		Preload("Memberships.Organization").
 		Preload("Memberships.Role").
+		Preload("Memberships.Role.Permissions").
 		Where("email = ?", email).
 		First(&user).Error
-	
+
 	if err != nil {
 		return nil, err
 	}
@@ -77,16 +79,16 @@ func (r *userRepo) PagedUsers(ctx context.Context, q models.UserQuery) ([]entity
 	if q.Offset != nil && *q.Offset >= 0 {
 		offset = *q.Offset
 	}
-	
+
 	err := db.Limit(limit).Offset(offset).Find(&users).Error
 	return users, total, err
 }
 
 func (r *userRepo) CursorUsers(ctx context.Context, q models.UserQueryCursor) ([]entity.User, string, error) {
 	var users []entity.User
-	
+
 	db := r.buildFilterQuery(ctx, q.UserFilter)
-	
+
 	if q.Cursor != nil && *q.Cursor != "" {
 		if cursorID, err := uuid.Parse(*q.Cursor); err == nil {
 			var cursorUser entity.User
@@ -102,7 +104,7 @@ func (r *userRepo) CursorUsers(ctx context.Context, q models.UserQueryCursor) ([
 	}
 
 	err := db.Order("created_at desc, id desc").
-		Limit(limit + 1). 
+		Limit(limit + 1).
 		Find(&users).Error
 
 	if err != nil {
@@ -124,7 +126,7 @@ func (r *userRepo) buildFilterQuery(ctx context.Context, f models.UserFilter) *g
 	if f.OrganizationID != nil {
 		db = db.Joins("JOIN organization_members om ON om.user_id = users.id").
 			Where("om.organization_id = ?", *f.OrganizationID)
-		
+
 		if f.RoleID != nil {
 			db = db.Where("om.role_id = ?", *f.RoleID)
 		}

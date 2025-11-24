@@ -36,7 +36,7 @@ func (r *graphRepo) UpdateNodeCalibration(ctx context.Context, id uuid.UUID, off
 
 func (r *graphRepo) UpdateNode(ctx context.Context, id uuid.UUID, req models.UpdateNodeRequest) error {
 	updates := make(map[string]interface{})
-	
+
 	if req.X != nil {
 		updates["x"] = *req.X
 	}
@@ -52,11 +52,11 @@ func (r *graphRepo) UpdateNode(ctx context.Context, id uuid.UUID, req models.Upd
 	if req.RotationOffset != nil {
 		updates["rotation_offset"] = *req.RotationOffset
 	}
-	
+
 	if len(updates) == 0 {
 		return nil // No updates to make
 	}
-	
+
 	return r.db.WithContext(ctx).Model(&entity.GraphNode{}).
 		Where("id = ?", id).
 		Updates(updates).Error
@@ -76,7 +76,7 @@ func (r *graphRepo) ConnectNodes(ctx context.Context, edge *entity.GraphEdge) er
 	}
 
 	dx := nodeB.X - nodeA.X
-	dy := nodeB.Y - nodeA.Y 
+	dy := nodeB.Y - nodeA.Y
 
 	dist := math.Sqrt(dx*dx + dy*dy)
 
@@ -88,7 +88,7 @@ func (r *graphRepo) ConnectNodes(ctx context.Context, edge *entity.GraphEdge) er
 
 	edge.Distance = dist
 	edge.Heading = headingDeg
-	
+
 	return r.db.WithContext(ctx).Create(edge).Error
 }
 
@@ -112,4 +112,20 @@ func (r *graphRepo) CountAreasByFloorID(ctx context.Context, floorID uuid.UUID) 
 		Where("floor_id = ? AND area_id IS NOT NULL", floorID).
 		Count(&count).Error
 	return int(count), err
+}
+
+func (r *graphRepo) GetNodesByFloorID(ctx context.Context, floorID uuid.UUID) ([]entity.GraphNode, error) {
+	var nodes []entity.GraphNode
+	err := r.db.WithContext(ctx).Preload("Panorama").Preload("Area").Where("floor_id = ?", floorID).Find(&nodes).Error
+	return nodes, err
+}
+
+func (r *graphRepo) GetEdgesFromNode(ctx context.Context, nodeID uuid.UUID) ([]entity.GraphEdge, error) {
+	var edges []entity.GraphEdge
+	err := r.db.WithContext(ctx).Preload("ToNode").Where("from_node_id = ?", nodeID).Find(&edges).Error
+	return edges, err
+}
+
+func (r *graphRepo) CreateEdge(ctx context.Context, edge *entity.GraphEdge) error {
+	return r.db.WithContext(ctx).Create(edge).Error
 }

@@ -3,11 +3,14 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"inspacemap/backend/internal/entity"
 	"inspacemap/backend/internal/models"
 	"inspacemap/backend/internal/repository"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 type graphService struct {
@@ -16,6 +19,7 @@ type graphService struct {
 	floorRepo    repository.FloorRepository
 	venueRepo    repository.VenueRepository
 	mediaRepo    repository.MediaAssetRepository
+	redis        *redis.Client
 }
 
 func NewGraphService(
@@ -24,6 +28,7 @@ func NewGraphService(
 	fRepo repository.FloorRepository,
 	vRepo repository.VenueRepository,
 	mRepo repository.MediaAssetRepository,
+	redisClient *redis.Client,
 ) GraphService {
 	return &graphService{
 		graphRepo:    gRepo,
@@ -31,6 +36,7 @@ func NewGraphService(
 		floorRepo:    fRepo,
 		venueRepo:    vRepo,
 		mediaRepo:    mRepo,
+		redis:        redisClient,
 	}
 }
 
@@ -38,20 +44,19 @@ func NewGraphService(
 // 1. FLOOR MANAGEMENT
 // =================================================================
 
-func (s *graphService) CreateFloor(ctx context.Context, venueID uuid.UUID, req models.CreateFloorRequest) (*models.IDResponse, error) {
-	// A. Pastikan kita bekerja di DRAFT Revision
-	draft, err := s.revisionRepo.GetDraftByVenueID(ctx, venueID)
+func (s *graphService) CreateFloor(ctx context.Context, revisionID uuid.UUID, userID uuid.UUID, req models.CreateFloorRequest) (*models.IDResponse, error) {
+	// A. Validasi revision exists dan adalah draft
+	revision, err := s.revisionRepo.GetByID(ctx, revisionID)
 	if err != nil {
-		// Auto-create draft jika belum ada (Lazy init)
-		draft, err = s.revisionRepo.CreateDraft(ctx, venueID)
-		if err != nil {
-			return nil, err
-		}
+		return nil, errors.New("revision not found")
+	}
+	if revision.Status != entity.StatusDraft {
+		return nil, errors.New("can only add floors to draft revisions")
 	}
 
 	floor := entity.Floor{
-		GraphRevisionID: draft.ID,
-		VenueID:         venueID,
+		GraphRevisionID: revisionID,
+		VenueID:         revision.VenueID,
 		Name:            req.Name,
 		LevelIndex:      req.LevelIndex,
 		MapImageID:      req.MapImageID,
@@ -68,9 +73,13 @@ func (s *graphService) CreateFloor(ctx context.Context, venueID uuid.UUID, req m
 }
 
 func (s *graphService) UpdateFloor(ctx context.Context, floorID uuid.UUID, req models.UpdateFloorRequest) error {
-	// A. Security Check: Pastikan Floor ini milik DRAFT
-	if _, err := s.revisionRepo.GetDraftByFloorID(ctx, floorID); err != nil {
-		return errors.New("cannot edit floor: it belongs to a published version or does not exist")
+	// A. Security Check: Pastikan Floor ini milik DRAFT dan tidak immutable
+	revision, err := s.revisionRepo.GetDraftByFloorID(ctx, floorID)
+	if err != nil {
+		return errors.New("cannot edit floor: it belongs to a published or immutable version or does not exist")
+	}
+	if revision.IsImmutable {
+		return errors.New("cannot edit floor: revision is immutable")
 	}
 
 	// B. Update floor properties
@@ -154,15 +163,9 @@ func (s *graphService) GetFloor(ctx context.Context, floorID uuid.UUID) (*models
 	}, nil
 }
 
-func (s *graphService) GetFloors(ctx context.Context, venueID uuid.UUID) ([]models.FloorAdminDetail, error) {
-	// Get draft revision for the venue
-	draft, err := s.revisionRepo.GetDraftByVenueID(ctx, venueID)
-	if err != nil {
-		return nil, err
-	}
-
+func (s *graphService) GetFloors(ctx context.Context, revisionID uuid.UUID) ([]models.FloorAdminDetail, error) {
 	// Get floors for this revision
-	floors, err := s.floorRepo.GetByGraphRevisionID(ctx, draft.ID)
+	floors, err := s.floorRepo.GetByGraphRevisionID(ctx, revisionID)
 	if err != nil {
 		return nil, err
 	}
@@ -308,13 +311,13 @@ func (s *graphService) ConnectNodes(ctx context.Context, req models.ConnectNodes
 	}
 
 	return &models.CreateEdgeResponse{
-		ID:        edge.ID,
+		ID:         edge.ID,
 		FromNodeID: edge.FromNodeID,
 		ToNodeID:   edge.ToNodeID,
-		Heading:   edge.Heading,
-		Distance:  edge.Distance,
-		Type:      edge.Type,
-		CreatedAt: edge.CreatedAt,
+		Heading:    edge.Heading,
+		Distance:   edge.Distance,
+		Type:       edge.Type,
+		CreatedAt:  edge.CreatedAt,
 	}, nil
 }
 
@@ -326,40 +329,44 @@ func (s *graphService) DeleteConnection(ctx context.Context, fromID, toID uuid.U
 // 4. WORKFLOW (EDITOR & PUBLISH)
 // =================================================================
 
-// GetEditorData: Mengambil data DRAFT lengkap untuk ditampilkan di Canvas Web Admin
-func (s *graphService) GetEditorData(ctx context.Context, venueID uuid.UUID) (*models.ManifestResponse, error) {
-	// 1. Ambil Draft (Auto-create jika tidak ada)
-	draft, err := s.revisionRepo.GetDraftByVenueID(ctx, venueID)
+func (s *graphService) GetEditorDataByRevision(ctx context.Context, revisionID uuid.UUID) (*models.ManifestResponse, error) {
+	// 1. Ambil revision by ID
+	revision, err := s.revisionRepo.GetByID(ctx, revisionID)
 	if err != nil {
-		draft, err = s.revisionRepo.CreateDraft(ctx, venueID)
-		if err != nil {
-			return nil, err
-		}
-		// Draft baru pasti kosong, return struktur kosong
-		return &models.ManifestResponse{
-			VenueID:     venueID,
-			VenueName:   "",
-			LastUpdated: draft.CreatedAt,
-			StartNodeID: uuid.Nil,
-			Floors:      []models.FloorData{}, // Explicit empty array
-		}, nil
+		return nil, errors.New("revision not found")
 	}
 
-	// 2. Mapping Entity GraphRevision -> DTO ManifestResponse
-	// Logic mapping ini mirip dengan GetMobileManifest, tapi sumber datanya adalah DRAFT
+	// 2. Load floors for this revision
+	floors, err := s.floorRepo.GetByGraphRevisionID(ctx, revisionID)
+	if err != nil {
+		return nil, err
+	}
 
+	// 3. Mapping Entity GraphRevision -> DTO ManifestResponse
 	var startNodeID uuid.UUID
-	if draft.StartNodeID != nil {
-		startNodeID = *draft.StartNodeID
+	if revision.StartNodeID != nil {
+		startNodeID = *revision.StartNodeID
 	}
 
 	var floorDTOs []models.FloorData
-	for _, floor := range draft.Floors {
+	for _, floor := range floors {
+		// Load nodes for this floor
+		nodes, err := s.graphRepo.GetNodesByFloorID(ctx, floor.ID)
+		if err != nil {
+			return nil, err
+		}
+
 		var nodeDTOs []models.NodeData
-		for _, node := range floor.Nodes {
+		for _, node := range nodes {
+			// Load edges for this node
+			edges, err := s.graphRepo.GetEdgesFromNode(ctx, node.ID)
+			if err != nil {
+				return nil, err
+			}
+
 			// Mapping Neighbors
 			var neighborDTOs []models.NeighborData
-			for _, edge := range node.OutgoingEdges {
+			for _, edge := range edges {
 				neighborDTOs = append(neighborDTOs, models.NeighborData{
 					TargetNodeID: edge.ToNodeID,
 					Heading:      edge.Heading,
@@ -415,24 +422,28 @@ func (s *graphService) GetEditorData(ctx context.Context, venueID uuid.UUID) (*m
 
 	// Ambil nama venue
 	venueName := ""
-	if venue, err := s.venueRepo.GetByID(ctx, venueID); err == nil {
+	if venue, err := s.venueRepo.GetByID(ctx, revision.VenueID); err == nil {
 		venueName = venue.Name
 	}
 
 	return &models.ManifestResponse{
-		VenueID:     venueID,
+		VenueID:     revision.VenueID,
 		VenueName:   venueName,
-		LastUpdated: draft.CreatedAt,
+		LastUpdated: revision.CreatedAt,
 		StartNodeID: startNodeID,
 		Floors:      floorDTOs,
 	}, nil
 }
 
-func (s *graphService) PublishChanges(ctx context.Context, venueID uuid.UUID, req models.PublishDraftRequest) error {
+func (s *graphService) PublishChanges(ctx context.Context, req models.PublishDraftRequest) error {
 	// Get the draft to validate it has content
-	draft, err := s.revisionRepo.GetDraftByVenueID(ctx, venueID)
+	draft, err := s.revisionRepo.GetByID(ctx, req.RevisionID)
 	if err != nil {
-		return errors.New("no draft revision found to publish")
+		return errors.New("draft revision not found")
+	}
+
+	if draft.Status != entity.StatusDraft {
+		return errors.New("only draft revisions can be published")
 	}
 
 	// Validate draft has at least one floor with nodes
@@ -463,15 +474,29 @@ func (s *graphService) PublishChanges(ctx context.Context, venueID uuid.UUID, re
 	}
 
 	// Proceed with publishing
-	return s.revisionRepo.PublishDraft(ctx, venueID, req.Note)
+	if err := s.revisionRepo.PublishDraft(ctx, req.RevisionID, req.Note); err != nil {
+		return err
+	}
+
+	// Invalidate cache for the venue
+	venue, err := s.venueRepo.GetByID(ctx, draft.VenueID)
+	if err != nil {
+		// Log error but don't fail the publish
+		return nil
+	}
+
+	cacheKey := fmt.Sprintf("manifest:%s:%s", venue.Organization.Slug, venue.Slug)
+	s.redis.Del(ctx, cacheKey)
+
+	return nil
 }
 
 // =================================================================
 // 5. GRAPH REVISION MANAGEMENT
 // =================================================================
 
-func (s *graphService) CreateDraftRevision(ctx context.Context, venueID uuid.UUID) (*models.IDResponse, error) {
-	draft, err := s.revisionRepo.CreateDraft(ctx, venueID)
+func (s *graphService) CreateDraftRevision(ctx context.Context, venueID uuid.UUID, userID uuid.UUID) (*models.IDResponse, error) {
+	draft, err := s.revisionRepo.CreateDraft(ctx, venueID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -596,4 +621,123 @@ func (s *graphService) DeleteRevision(ctx context.Context, revisionID uuid.UUID)
 
 	// Delete the revision (cascade will handle floors, nodes, edges)
 	return s.revisionRepo.Delete(ctx, revisionID)
+}
+
+func (s *graphService) DeepCopyRevision(ctx context.Context, sourceRevisionID, targetVenueID uuid.UUID, note string) (*models.DeepCopyRevisionResponse, error) {
+	// Get source revision
+	source, err := s.revisionRepo.GetByID(ctx, sourceRevisionID)
+	if err != nil {
+		return nil, errors.New("source revision not found")
+	}
+
+	// Get target venue to check organization
+	targetVenue, err := s.venueRepo.GetByID(ctx, targetVenueID)
+	if err != nil {
+		return nil, errors.New("target venue not found")
+	}
+
+	// Auth check: ensure same organization
+	if source.OrganizationID != targetVenue.OrganizationID {
+		return nil, errors.New("cannot copy revision: source and target must be in the same organization")
+	}
+
+	// Create new draft revision for target venue
+	newRevision := entity.GraphRevision{
+		OrganizationID: targetVenue.OrganizationID,
+		CreatedByID:    source.CreatedByID, // Or get from context, but for now use source
+		VenueID:        targetVenueID,
+		Status:         entity.StatusDraft,
+		Note:           note,
+		StartNodeID:    source.StartNodeID,
+	}
+
+	if err := s.revisionRepo.Create(ctx, &newRevision); err != nil {
+		return nil, err
+	}
+
+	// Deep copy floors, nodes, edges
+	floors, err := s.floorRepo.GetByGraphRevisionID(ctx, sourceRevisionID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, floor := range floors {
+		newFloor := entity.Floor{
+			GraphRevisionID: newRevision.ID,
+			VenueID:         targetVenueID,
+			Name:            floor.Name,
+			LevelIndex:      floor.LevelIndex,
+			MapImageID:      floor.MapImageID,
+			MapWidth:        floor.MapWidth,
+			MapHeight:       floor.MapHeight,
+			PixelsPerMeter:  floor.PixelsPerMeter,
+			IsActive:        floor.IsActive,
+		}
+
+		if err := s.floorRepo.Create(ctx, &newFloor); err != nil {
+			return nil, err
+		}
+
+		// Copy nodes and edges for this floor
+		nodes, err := s.graphRepo.GetNodesByFloorID(ctx, floor.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		nodeIDMap := make(map[uuid.UUID]uuid.UUID) // old -> new node ID
+
+		for _, node := range nodes {
+			newNode := entity.GraphNode{
+				FloorID:         newFloor.ID,
+				X:               node.X,
+				Y:               node.Y,
+				AreaID:          node.AreaID,
+				PanoramaAssetID: node.PanoramaAssetID,
+				RotationOffset:  node.RotationOffset,
+				Label:           node.Label,
+				Properties:      node.Properties,
+				IsActive:        node.IsActive,
+			}
+
+			if err := s.graphRepo.CreateNode(ctx, &newNode); err != nil {
+				return nil, err
+			}
+
+			nodeIDMap[node.ID] = newNode.ID
+		}
+
+		// Copy edges
+		for _, node := range nodes {
+			edges, err := s.graphRepo.GetEdgesFromNode(ctx, node.ID)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, edge := range edges {
+				newFromID := nodeIDMap[edge.FromNodeID]
+				newToID := nodeIDMap[edge.ToNodeID]
+
+				newEdge := entity.GraphEdge{
+					FromNodeID: newFromID,
+					ToNodeID:   newToID,
+					Heading:    edge.Heading,
+					Distance:   edge.Distance,
+					Type:       edge.Type,
+					IsActive:   edge.IsActive,
+				}
+
+				if err := s.graphRepo.CreateEdge(ctx, &newEdge); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	return &models.DeepCopyRevisionResponse{
+		NewRevisionID: newRevision.ID,
+		Note:          newRevision.Note,
+		Status:        models.RevisionStatus(newRevision.Status),
+		CreatedAt:     newRevision.BaseEntity.CreatedAt.Format(time.RFC3339),
+		CreatedBy:     newRevision.CreatedByID.String(),
+	}, nil
 }

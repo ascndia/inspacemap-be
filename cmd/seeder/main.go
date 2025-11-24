@@ -142,9 +142,9 @@ func seedDevelopmentData(db *gorm.DB) {
 				log.Fatalf("Error hashing password: %v", err)
 			}
 			user := entity.User{
-				Email:        u.email,
-				PasswordHash: hash,
-				FullName:     u.fullName,
+				Email:           u.email,
+				PasswordHash:    hash,
+				FullName:        u.fullName,
 				IsEmailVerified: true,
 			}
 			user.ID = uuid.New()
@@ -216,7 +216,7 @@ func seedDevelopmentData(db *gorm.DB) {
 		// Don't create yet, will create after venue
 
 		venue := entity.Venue{
-			OrganizationID:  org.ID,
+			OrganizationID: org.ID,
 			Name:           "Demo Venue",
 			Slug:           "demo-venue",
 			Description:    "A sample venue for development testing",
@@ -231,7 +231,7 @@ func seedDevelopmentData(db *gorm.DB) {
 		draftRevision.VenueID = venue.ID
 		db.Create(&draftRevision)
 		venue.LiveRevisionID = draftRevision.ID
-		venue.DraftRevisionID = &draftRevision.ID
+		// venue.DraftRevisionID = &draftRevision.ID // Removed for multiple drafts
 		db.Create(&venue)
 		log.Printf("Created Venue: %s", venue.Name)
 	}

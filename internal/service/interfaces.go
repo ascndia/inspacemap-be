@@ -28,26 +28,27 @@ type RoleService interface {
 
 type GraphService interface {
 	CreateNode(ctx context.Context, req models.CreateNodeRequest) (*models.CreateNodeResponse, error)
-	CreateFloor(ctx context.Context, venueID uuid.UUID, req models.CreateFloorRequest) (*models.IDResponse, error)
+	CreateFloor(ctx context.Context, revisionID uuid.UUID, userID uuid.UUID, req models.CreateFloorRequest) (*models.IDResponse, error)
 	UpdateFloor(ctx context.Context, floorID uuid.UUID, req models.UpdateFloorRequest) error
 	DeleteFloor(ctx context.Context, floorID uuid.UUID) error
 	GetFloor(ctx context.Context, floorID uuid.UUID) (*models.FloorAdminDetail, error)
-	GetFloors(ctx context.Context, venueID uuid.UUID) ([]models.FloorAdminDetail, error)
+	GetFloors(ctx context.Context, revisionID uuid.UUID) ([]models.FloorAdminDetail, error)
 	ConnectNodes(ctx context.Context, req models.ConnectNodesRequest) (*models.CreateEdgeResponse, error)
 	UpdateNodePosition(ctx context.Context, nodeID uuid.UUID, req models.UpdateNodePositionRequest) error
 	UpdateNodeCalibration(ctx context.Context, nodeID uuid.UUID, req models.UpdateNodeCalibrationRequest) error
 	UpdateNode(ctx context.Context, nodeID uuid.UUID, req models.UpdateNodeRequest) error
 	DeleteNode(ctx context.Context, nodeID uuid.UUID) error
 	DeleteConnection(ctx context.Context, fromID, toID uuid.UUID) error
-	GetEditorData(ctx context.Context, venueID uuid.UUID) (*models.ManifestResponse, error)
-	PublishChanges(ctx context.Context, venueID uuid.UUID, req models.PublishDraftRequest) error
+	GetEditorDataByRevision(ctx context.Context, revisionID uuid.UUID) (*models.ManifestResponse, error)
+	PublishChanges(ctx context.Context, req models.PublishDraftRequest) error
 
 	// Graph Revision Management
-	CreateDraftRevision(ctx context.Context, venueID uuid.UUID) (*models.IDResponse, error)
+	CreateDraftRevision(ctx context.Context, venueID uuid.UUID, userID uuid.UUID) (*models.IDResponse, error)
 	ListRevisions(ctx context.Context, venueID uuid.UUID) ([]models.RevisionHistoryItem, error)
 	GetRevisionDetail(ctx context.Context, revisionID uuid.UUID) (*models.GraphRevisionDetail, error)
 	UpdateRevision(ctx context.Context, revisionID uuid.UUID, req models.UpdateRevisionRequest) error
 	DeleteRevision(ctx context.Context, revisionID uuid.UUID) error
+	DeepCopyRevision(ctx context.Context, sourceRevisionID, targetVenueID uuid.UUID, note string) (*models.DeepCopyRevisionResponse, error)
 }
 
 type OrganizationService interface {
@@ -86,7 +87,7 @@ type VenueService interface {
 	GetVenueDetail(ctx context.Context, id uuid.UUID) (*models.VenueDetail, error)
 	GetVenueBySlug(ctx context.Context, slug string) (*models.VenueDetail, error)
 	ListVenues(ctx context.Context, query models.VenueQuery) ([]models.VenueListItem, int64, error)
-	GetMobileManifest(ctx context.Context, slug string) (*models.ManifestResponse, error)
+	GetMobileManifest(ctx context.Context, orgSlug, venueSlug string) (*models.MobileManifest, error)
 }
 type VenueGalleryService interface {
 	ReorderGallery(ctx context.Context, req models.ReorderVenueGalleryRequest) error

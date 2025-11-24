@@ -4,16 +4,21 @@ import "github.com/google/uuid"
 
 type RevisionStatus string
 
-
 type FilterGraphRevision struct {
-	OrganizationID *uuid.UUID        `json:"organization_id,omitempty"`
-	CreatedByID    *uuid.UUID        `json:"created_by_id,omitempty"`
-	Status         *RevisionStatus  `json:"status,omitempty"`
-	FloorID        *uuid.UUID        `json:"floor_id,omitempty"`
-	Note		  *string           `json:"note,omitempty"`
-	VenueID        *uuid.UUID        `json:"venue_id,omitempty"`
-	CreatedAfter  *string           `json:"created_after,omitempty"`
-	CreatedBefore *string           `json:"created_before,omitempty"`
+	OrganizationID *uuid.UUID      `json:"organization_id,omitempty"`
+	CreatedByID    *uuid.UUID      `json:"created_by_id,omitempty"`
+	Status         *RevisionStatus `json:"status,omitempty"`
+	FloorID        *uuid.UUID      `json:"floor_id,omitempty"`
+	Note           *string         `json:"note,omitempty"`
+	VenueID        *uuid.UUID      `json:"venue_id,omitempty"`
+	CreatedAfter   *string         `json:"created_after,omitempty"`
+	CreatedBefore  *string         `json:"created_before,omitempty"`
+}
+
+type CloneRevisionRequest struct {
+	SourceRevisionID uuid.UUID `json:"source_revision_id" validate:"required"`
+	TargetVenueID    uuid.UUID `json:"target_venue_id" validate:"required"`
+	Note             string    `json:"note"`
 }
 
 type QueryGraphRevision struct {
@@ -27,4 +32,18 @@ type CursorGraphRevisionQuery struct {
 	FilterGraphRevision
 	Limit  *int    `json:"limit,omitempty"`
 	Cursor *string `json:"cursor,omitempty"`
+}
+
+type DeepCopyRevisionRequest struct {
+	SourceRevisionID uuid.UUID `json:"source_revision_id" validate:"required"`
+	TargetVenueID    uuid.UUID `json:"target_venue_id" validate:"required"`
+	Note             string    `json:"note"`
+}
+
+type DeepCopyRevisionResponse struct {
+	NewRevisionID uuid.UUID      `json:"new_revision_id"`
+	Note          string         `json:"note"`
+	Status        RevisionStatus `json:"status"`
+	CreatedAt     string         `json:"created_at"`
+	CreatedBy     string         `json:"created_by"`
 }

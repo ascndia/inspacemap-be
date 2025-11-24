@@ -25,6 +25,7 @@ func NewVenueRepository(db *gorm.DB) VenueRepository {
 func (r *venueRepo) GetByID(ctx context.Context, id uuid.UUID) (*entity.Venue, error) {
 	var venue entity.Venue
 	err := r.db.WithContext(ctx).
+		Preload("Organization").
 		Preload("CoverImage").
 		Preload("Gallery.MediaAsset").
 		Preload("PointsOfInterest"). // Load Area/POI
@@ -176,10 +177,11 @@ func (r *venueRepo) buildFilterQuery(ctx context.Context, f models.VenueFilter) 
 	return db
 }
 
-func (r *venueRepo) GetLiveManifestData(venueSlug string) (*entity.Venue, error) {
+func (r *venueRepo) GetLiveManifestData(ctx context.Context, orgSlug, venueSlug string) (*entity.Venue, error) {
 	var venue entity.Venue
 
-	err := r.db.
+	err := r.db.WithContext(ctx).
+		Joins("JOIN organizations ON organizations.id = venues.organization_id").
 		Preload("LiveRevision").
 		Preload("LiveRevision.Floors").
 		Preload("LiveRevision.Floors.MapImage").
@@ -190,7 +192,9 @@ func (r *venueRepo) GetLiveManifestData(venueSlug string) (*entity.Venue, error)
 		Preload("LiveRevision.Floors.Nodes.OutgoingEdges", func(db *gorm.DB) *gorm.DB {
 			return db.Where("is_active = ?", true)
 		}).
-		Where("slug = ?", venueSlug).
+		Preload("CoverImage").
+		Preload("Gallery.MediaAsset").
+		Where("venues.slug = ? AND organizations.slug = ?", venueSlug, orgSlug).
 		First(&venue).Error
 
 	if err != nil {
@@ -202,23 +206,4 @@ func (r *venueRepo) GetLiveManifestData(venueSlug string) (*entity.Venue, error)
 	}
 
 	return &venue, nil
-}
-
-func (r *venueRepo) GetDraftDataUUID(venueID uuid.UUID) (*entity.GraphRevision, error) {
-	var venue entity.Venue
-	if err := r.db.First(&venue, "id = ?", venueID).Error; err != nil {
-		return nil, err
-	}
-
-	if venue.DraftRevisionID == nil {
-		return nil, errors.New("no active draft found")
-	}
-
-	var draft entity.GraphRevision
-	err := r.db.
-		Preload("Floors.Nodes.Panorama").
-		Preload("Floors.Nodes.OutgoingEdges").
-		First(&draft, "id = ?", *venue.DraftRevisionID).Error
-
-	return &draft, err
 }

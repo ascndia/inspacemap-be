@@ -6,12 +6,17 @@ import (
 	"github.com/google/uuid"
 )
 
+type LoadEditorRequest struct {
+	RevisionID uuid.UUID `json:"revision_id" validate:"required"`
+}
+
 type PublishDraftRequest struct {
-	Note string `json:"note" validate:"max=255"`
+	RevisionID uuid.UUID `json:"revision_id" validate:"required"`
+	Note       string    `json:"note" validate:"max=255"`
 }
 
 type RevisionHistoryItem struct {
-	ID        uuid.UUID `json:"id"` 
+	ID        uuid.UUID `json:"id"`
 	Status    string    `json:"status"`
 	Note      string    `json:"note"`
 	CreatedAt time.Time `json:"created_at"`
@@ -19,12 +24,12 @@ type RevisionHistoryItem struct {
 }
 
 type GraphRevisionDetail struct {
-	ID        uuid.UUID `json:"id"`
-	VenueID   uuid.UUID `json:"venue_id"`
-	Status    string    `json:"status"`
-	Note      string    `json:"note"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        uuid.UUID     `json:"id"`
+	VenueID   uuid.UUID     `json:"venue_id"`
+	Status    string        `json:"status"`
+	Note      string        `json:"note"`
+	CreatedAt time.Time     `json:"created_at"`
+	UpdatedAt time.Time     `json:"updated_at"`
 	Floors    []FloorDetail `json:"floors"`
 }
 
@@ -42,38 +47,38 @@ type FloorDetail struct {
 }
 type CreateNodeRequest struct {
 	FloorID         uuid.UUID `json:"floor_id" validate:"required"`
-	X               float64   `json:"x" validate:"required"` 
+	X               float64   `json:"x" validate:"required"`
 	Y               float64   `json:"y" validate:"required"`
 	PanoramaAssetID uuid.UUID `json:"panorama_asset_id" validate:"required"`
 	Label           string    `json:"label"`
 }
 
 type UpdateNodePositionRequest struct {
-	ID 		 uuid.UUID    `json:"id" validate:"required"`
-	X float64 `json:"x" validate:"required"`
-	Y float64 `json:"y" validate:"required"`
+	ID uuid.UUID `json:"id" validate:"required"`
+	X  float64   `json:"x" validate:"required"`
+	Y  float64   `json:"y" validate:"required"`
 }
 
 type UpdateNodeCalibrationRequest struct {
-	ID              uuid.UUID `json:"id" validate:"required"`
-	RotationOffset float64 `json:"rotation_offset" validate:"required"` 
+	ID             uuid.UUID `json:"id" validate:"required"`
+	RotationOffset float64   `json:"rotation_offset" validate:"required"`
 }
 
 type UpdateNodeRequest struct {
-	X                *float64   `json:"x,omitempty"`
-	Y                *float64   `json:"y,omitempty"`
-	PanoramaAssetID  *uuid.UUID `json:"panorama_asset_id,omitempty"`
-	Label            *string    `json:"label,omitempty"`
-	RotationOffset   *float64   `json:"rotation_offset,omitempty"`
+	X               *float64   `json:"x,omitempty"`
+	Y               *float64   `json:"y,omitempty"`
+	PanoramaAssetID *uuid.UUID `json:"panorama_asset_id,omitempty"`
+	Label           *string    `json:"label,omitempty"`
+	RotationOffset  *float64   `json:"rotation_offset,omitempty"`
 }
 
 type NodeAdminItem struct {
-	ID             uuid.UUID      `json:"id"`
+	ID             uuid.UUID `json:"id"`
 	Label          string    `json:"label"`
 	X              float64   `json:"x"`
 	Y              float64   `json:"y"`
 	RotationOffset float64   `json:"rotation_offset"`
-	PanoramaURL    string    `json:"panorama_thumbnail"` 
+	PanoramaURL    string    `json:"panorama_thumbnail"`
 }
 
 type ConnectNodesRequest struct {
@@ -91,13 +96,13 @@ type CreateNodeResponse struct {
 }
 
 type CreateEdgeResponse struct {
-	ID        uuid.UUID `json:"id"`
+	ID         uuid.UUID `json:"id"`
 	FromNodeID uuid.UUID `json:"from_node_id"`
 	ToNodeID   uuid.UUID `json:"to_node_id"`
-	Heading   float64   `json:"heading"`
-	Distance  float64   `json:"distance"`
-	Type      string    `json:"type"`
-	CreatedAt time.Time `json:"created_at"`
+	Heading    float64   `json:"heading"`
+	Distance   float64   `json:"distance"`
+	Type       string    `json:"type"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type UpdateRevisionRequest struct {

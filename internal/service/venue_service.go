@@ -2,21 +2,27 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"inspacemap/backend/internal/entity"
 	"inspacemap/backend/internal/models"
 	"inspacemap/backend/internal/repository"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 type venueService struct {
 	venueRepo repository.VenueRepository
+	redis     *redis.Client
 }
 
-func NewVenueService(vRepo repository.VenueRepository) VenueService {
+func NewVenueService(vRepo repository.VenueRepository, redisClient *redis.Client) VenueService {
 	return &venueService{
 		venueRepo: vRepo,
+		redis:     redisClient,
 	}
 }
 
@@ -175,8 +181,19 @@ func (s *venueService) ListVenues(ctx context.Context, query models.VenueQuery) 
 // 3. MOBILE APP CONSUMER
 // =================================================================
 
-func (s *venueService) GetMobileManifest(ctx context.Context, slug string) (*models.ManifestResponse, error) {
-	venueEntity, err := s.venueRepo.GetLiveManifestData(slug)
+func (s *venueService) GetMobileManifest(ctx context.Context, orgSlug, venueSlug string) (*models.MobileManifest, error) {
+	cacheKey := fmt.Sprintf("manifest:%s:%s", orgSlug, venueSlug)
+
+	// Cek cache
+	if cached, err := s.redis.Get(ctx, cacheKey).Result(); err == nil {
+		var manifest models.MobileManifest
+		if json.Unmarshal([]byte(cached), &manifest) == nil {
+			return &manifest, nil
+		}
+	}
+
+	// Fetch dari DB
+	venueEntity, err := s.venueRepo.GetLiveManifestData(ctx, orgSlug, venueSlug)
 	if err != nil {
 		return nil, err
 	}
@@ -243,13 +260,51 @@ func (s *venueService) GetMobileManifest(ctx context.Context, slug string) (*mod
 		})
 	}
 
-	return &models.ManifestResponse{
-		VenueID:     venueEntity.ID,
-		VenueName:   venueEntity.Name,
-		LastUpdated: venueEntity.LiveRevision.CreatedAt,
-		StartNodeID: startNodeID,
-		Floors:      floorDTOs,
-	}, nil
+	// Build gallery
+	var galleryDTOs []models.VenueGalleryDetail
+	for _, item := range venueEntity.Gallery {
+		url, thumb := "", ""
+		if item.MediaAsset.ID != uuid.Nil {
+			url = item.MediaAsset.PublicURL
+			thumb = item.MediaAsset.ThumbnailURL
+		}
+		galleryDTOs = append(galleryDTOs, models.VenueGalleryDetail{
+			MediaID:      item.MediaAssetID,
+			URL:          url,
+			ThumbnailURL: thumb,
+			Caption:      item.Caption,
+			SortOrder:    item.SortOrder,
+			IsFeatured:   item.IsFeatured,
+		})
+	}
+
+	coverURL := ""
+	if venueEntity.CoverImage != nil {
+		coverURL = venueEntity.CoverImage.PublicURL
+	}
+
+	manifest := &models.MobileManifest{
+		VenueID:       venueEntity.ID,
+		VenueName:     venueEntity.Name,
+		Slug:          venueEntity.Slug,
+		Description:   venueEntity.Description,
+		Address:       venueEntity.Address,
+		City:          venueEntity.City,
+		Province:      venueEntity.Province,
+		PostalCode:    venueEntity.PostalCode,
+		Coordinates:   models.GeoPoint{Latitude: venueEntity.Latitude, Longitude: venueEntity.Longitude},
+		CoverImageURL: coverURL,
+		Gallery:       galleryDTOs,
+		LastUpdated:   venueEntity.LiveRevision.CreatedAt,
+		StartNodeID:   startNodeID,
+		Floors:        floorDTOs,
+	}
+
+	// Set cache
+	data, _ := json.Marshal(manifest)
+	s.redis.Set(ctx, cacheKey, data, time.Hour)
+
+	return manifest, nil
 }
 
 func (s *venueService) mapEntityToDetail(venue *entity.Venue) *models.VenueDetail {
