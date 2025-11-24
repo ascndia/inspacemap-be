@@ -77,10 +77,10 @@ func (c *RouteConfig) Setup() {
 
 	editor := tenant.Group("/editor")
 
-	editor.Get("/:venue_id", c.GraphHandler.GetEditorData)
+	editor.Get("/:revision_id", c.GraphHandler.GetEditorData)
 
-	editor.Post("/floors", c.GraphHandler.CreateFloor)
-	editor.Get("/:venue_id/floors", c.GraphHandler.GetFloors)
+	editor.Post("/:revision_id/floors", c.GraphHandler.CreateFloor)
+	editor.Get("/:revision_id/floors", c.GraphHandler.GetFloors)
 	editor.Get("/floors/:id", c.GraphHandler.GetFloor)
 	editor.Put("/floors/:id", c.GraphHandler.UpdateFloor)
 	editor.Delete("/floors/:id", c.GraphHandler.DeleteFloor)

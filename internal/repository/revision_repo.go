@@ -165,32 +165,27 @@ func (r *revisionRepo) CursorGraphRevisions(ctx context.Context, q models.Cursor
 	return revs, err
 }
 
-func (r *revisionRepo) CreateDraft(ctx context.Context, venueID uuid.UUID) (*entity.GraphRevision, error) {
-	// 1. Cek apakah sudah ada draft aktif? (Prevent double draft)
-	var count int64
-	r.db.WithContext(ctx).Model(&entity.GraphRevision{}).
-		Where("venue_id = ? AND status = ?", venueID, entity.StatusDraft).
-		Count(&count)
-
-	if count > 0 {
-		return nil, errors.New("draft already exists")
+func (r *revisionRepo) CreateDraft(ctx context.Context, venueID uuid.UUID, userID uuid.UUID) (*entity.GraphRevision, error) {
+	// 1. Ambil organization_id dari venue
+	var venue entity.Venue
+	if err := r.db.WithContext(ctx).Select("organization_id").First(&venue, "id = ?", venueID).Error; err != nil {
+		return nil, err
 	}
 
 	// 2. Siapkan Draft Baru
 	newDraft := entity.GraphRevision{
-		VenueID: venueID,
-		Status:  entity.StatusDraft,
-		Note:    "Auto-generated draft",
+		OrganizationID: venue.OrganizationID,
+		CreatedByID:    userID,
+		VenueID:        venueID,
+		Status:         entity.StatusDraft,
+		Note:           "Auto-generated draft",
 	}
 
-	// Transaction: Simpan Revisi -> Update Pointer Venue
+	// Transaction: Simpan Revisi
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&newDraft).Error; err != nil {
 			return err
 		}
-		// Update field draft_revision_id di tabel Venue (removed for multiple drafts)
-		// return tx.Model(&entity.Venue{BaseEntity: entity.BaseEntity{ID: venueID}}).
-		//	Update("draft_revision_id", newDraft.ID).Error
 		return nil
 	})
 
@@ -316,6 +311,7 @@ func (r *revisionRepo) PublishDraft(ctx context.Context, revisionID uuid.UUID, n
 		newLiveRev := entity.GraphRevision{
 			VenueID:        draft.VenueID,
 			OrganizationID: draft.OrganizationID,
+			CreatedByID:    draft.CreatedByID, // Copy dari draft
 			Status:         entity.StatusPublished,
 			Note:           note,
 		}
@@ -399,18 +395,30 @@ func (r *revisionRepo) PublishDraft(ctx context.Context, revisionID uuid.UUID, n
 			tx.Model(&newLiveRev).Update("start_node_id", *newStartNodeID)
 		}
 
+		// Ambil live_revision_id lama sebelum update
+		var venue entity.Venue
+		if err := tx.Select("live_revision_id").Where("id = ?", draft.VenueID).First(&venue).Error; err != nil {
+			return err
+		}
+
+		oldLiveID := venue.LiveRevisionID
+
 		// Update Venue agar menunjuk ke Live Revision yang baru
 		if err := tx.Model(&entity.Venue{BaseEntity: entity.BaseEntity{ID: draft.VenueID}}).Update("live_revision_id", newLiveRev.ID).Error; err != nil {
 			return err
+		}
+
+		// Archive live revision lama jika ada dan berbeda dari yang baru
+		if oldLiveID != uuid.Nil && oldLiveID != newLiveRev.ID {
+			if err := tx.Model(&entity.GraphRevision{}).Where("id = ?", oldLiveID).Update("status", entity.StatusArchived).Error; err != nil {
+				return err
+			}
 		}
 
 		// Set live revision as immutable
 		if err := tx.Model(&newLiveRev).Update("is_immutable", true).Error; err != nil {
 			return err
 		}
-
-		// (Opsional) Archive revisi live lama jika perlu
-		// ...
 
 		return nil
 	})

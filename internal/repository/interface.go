@@ -108,7 +108,7 @@ type GraphRepository interface {
 
 type GraphRevisionRepository interface {
 	BaseRepository[entity.GraphRevision, uuid.UUID]
-	CreateDraft(ctx context.Context, venueID uuid.UUID) (*entity.GraphRevision, error)
+	CreateDraft(ctx context.Context, venueID uuid.UUID, userID uuid.UUID) (*entity.GraphRevision, error)
 	PublishDraft(ctx context.Context, revisionID uuid.UUID, note string) error
 	GetDraftByFloorID(ctx context.Context, floorID uuid.UUID) (*entity.GraphRevision, error)
 	GetDraftByVenueID(ctx context.Context, venueID uuid.UUID) (*entity.GraphRevision, error)

@@ -20,14 +20,14 @@ func NewGraphHandler(s service.GraphService) *GraphHandler {
 
 // --- EDITOR DATA ---
 
-// GET /api/v1/editor/:venue_id
+// GET /api/v1/editor/:revision_id
 func (h *GraphHandler) GetEditorData(c *fiber.Ctx) error {
-	venueID, err := uuid.Parse(c.Params("venue_id"))
+	revisionID, err := uuid.Parse(c.Params("revision_id"))
 	if err != nil {
-		return utils.SendError(c, 400, "Invalid Venue ID")
+		return utils.SendError(c, 400, "Invalid revision_id")
 	}
 
-	data, err := h.service.GetEditorData(c.Context(), venueID)
+	data, err := h.service.GetEditorDataByRevision(c.Context(), revisionID)
 	if err != nil {
 		return utils.SendError(c, 500, err.Error())
 	}
@@ -35,22 +35,22 @@ func (h *GraphHandler) GetEditorData(c *fiber.Ctx) error {
 	return utils.SendSuccess(c, data)
 }
 
-// POST /api/v1/editor/floors
+// POST /api/v1/editor/:revision_id/floors
 func (h *GraphHandler) CreateFloor(c *fiber.Ctx) error {
 	var req models.CreateFloorRequest
 	if err := c.BodyParser(&req); err != nil {
 		return utils.SendError(c, 400, "Invalid JSON")
 	}
 
-	// Ambil VenueID dari query param atau context (disini asumsi ada di query ?venue_id=...)
-	// Atau DTO CreateFloorRequest bisa diupdate untuk menerima VenueID
-	venueIDStr := c.Query("venue_id")
-	venueID, err := uuid.Parse(venueIDStr)
+	revisionIDStr := c.Params("revision_id")
+	revisionID, err := uuid.Parse(revisionIDStr)
 	if err != nil {
-		return utils.SendError(c, 400, "venue_id query param required")
+		return utils.SendError(c, 400, "revision_id query param required")
 	}
 
-	resp, err := h.service.CreateFloor(c.Context(), venueID, req)
+	userID := c.Locals("user_id").(uuid.UUID)
+
+	resp, err := h.service.CreateFloor(c.Context(), revisionID, userID, req)
 	if err != nil {
 		return utils.SendError(c, 500, err.Error())
 	}
@@ -106,14 +106,15 @@ func (h *GraphHandler) GetFloor(c *fiber.Ctx) error {
 	return utils.SendSuccess(c, floor)
 }
 
-// GET /api/v1/editor/:venue_id/floors
+// GET /api/v1/editor/:revision_id/floors
 func (h *GraphHandler) GetFloors(c *fiber.Ctx) error {
-	venueID, err := uuid.Parse(c.Params("venue_id"))
+	revisionIDStr := c.Params("revision_id")
+	revisionID, err := uuid.Parse(revisionIDStr)
 	if err != nil {
-		return utils.SendError(c, 400, "Invalid Venue ID")
+		return utils.SendError(c, 400, "revision_id query param required")
 	}
 
-	floors, err := h.service.GetFloors(c.Context(), venueID)
+	floors, err := h.service.GetFloors(c.Context(), revisionID)
 	if err != nil {
 		return utils.SendError(c, 500, err.Error())
 	}
@@ -236,13 +237,12 @@ func (h *GraphHandler) DeleteConnection(c *fiber.Ctx) error {
 
 // POST /api/v1/editor/:venue_id/publish
 func (h *GraphHandler) Publish(c *fiber.Ctx) error {
-	venueID, _ := uuid.Parse(c.Params("venue_id"))
 	var req models.PublishDraftRequest
 	if err := c.BodyParser(&req); err != nil {
 		return utils.SendError(c, 400, "Invalid JSON")
 	}
 
-	if err := h.service.PublishChanges(c.Context(), venueID, req); err != nil {
+	if err := h.service.PublishChanges(c.Context(), req); err != nil {
 		// Check for business logic validation errors
 		if strings.Contains(err.Error(), "no draft revision found") ||
 			strings.Contains(err.Error(), "cannot publish empty revision") {
@@ -262,7 +262,9 @@ func (h *GraphHandler) CreateDraftRevision(c *fiber.Ctx) error {
 		return utils.SendError(c, 400, "Invalid Venue ID")
 	}
 
-	resp, err := h.service.CreateDraftRevision(c.Context(), venueID)
+	userID := c.Locals("user_id").(uuid.UUID)
+
+	resp, err := h.service.CreateDraftRevision(c.Context(), venueID, userID)
 	if err != nil {
 		// Check for business logic validation errors
 		if strings.Contains(err.Error(), "draft already exists") {
@@ -343,4 +345,17 @@ func (h *GraphHandler) DeleteRevision(c *fiber.Ctx) error {
 	}
 
 	return utils.SendSuccess(c, "Revision deleted successfully")
+}
+
+// POST /api/v1/editor/revisions/:source_revision_id/clone
+func (h *GraphHandler) CloneRevision(c *fiber.Ctx) error {
+	req := models.CloneRevisionRequest{}
+	if err := c.BodyParser(&req); err != nil {
+		return utils.SendError(c, 400, "Invalid JSON")
+	}
+	resp, err := h.service.DeepCopyRevision(c.Context(), req.SourceRevisionID, req.TargetVenueID, req.Note)
+	if err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+	return utils.SendCreated(c, resp)
 }

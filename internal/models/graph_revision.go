@@ -15,6 +15,12 @@ type FilterGraphRevision struct {
 	CreatedBefore  *string         `json:"created_before,omitempty"`
 }
 
+type CloneRevisionRequest struct {
+	SourceRevisionID uuid.UUID `json:"source_revision_id" validate:"required"`
+	TargetVenueID    uuid.UUID `json:"target_venue_id" validate:"required"`
+	Note             string    `json:"note"`
+}
+
 type QueryGraphRevision struct {
 	FilterGraphRevision
 	Limit  *int    `json:"limit,omitempty"`

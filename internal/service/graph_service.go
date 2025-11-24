@@ -43,20 +43,19 @@ func NewGraphService(
 // 1. FLOOR MANAGEMENT
 // =================================================================
 
-func (s *graphService) CreateFloor(ctx context.Context, venueID uuid.UUID, req models.CreateFloorRequest) (*models.IDResponse, error) {
-	// A. Pastikan kita bekerja di DRAFT Revision
-	draft, err := s.revisionRepo.GetDraftByVenueID(ctx, venueID)
+func (s *graphService) CreateFloor(ctx context.Context, revisionID uuid.UUID, userID uuid.UUID, req models.CreateFloorRequest) (*models.IDResponse, error) {
+	// A. Validasi revision exists dan adalah draft
+	revision, err := s.revisionRepo.GetByID(ctx, revisionID)
 	if err != nil {
-		// Auto-create draft jika belum ada (Lazy init)
-		draft, err = s.revisionRepo.CreateDraft(ctx, venueID)
-		if err != nil {
-			return nil, err
-		}
+		return nil, errors.New("revision not found")
+	}
+	if revision.Status != entity.StatusDraft {
+		return nil, errors.New("can only add floors to draft revisions")
 	}
 
 	floor := entity.Floor{
-		GraphRevisionID: draft.ID,
-		VenueID:         venueID,
+		GraphRevisionID: revisionID,
+		VenueID:         revision.VenueID,
 		Name:            req.Name,
 		LevelIndex:      req.LevelIndex,
 		MapImageID:      req.MapImageID,
@@ -163,15 +162,9 @@ func (s *graphService) GetFloor(ctx context.Context, floorID uuid.UUID) (*models
 	}, nil
 }
 
-func (s *graphService) GetFloors(ctx context.Context, venueID uuid.UUID) ([]models.FloorAdminDetail, error) {
-	// Get draft revision for the venue
-	draft, err := s.revisionRepo.GetDraftByVenueID(ctx, venueID)
-	if err != nil {
-		return nil, err
-	}
-
+func (s *graphService) GetFloors(ctx context.Context, revisionID uuid.UUID) ([]models.FloorAdminDetail, error) {
 	// Get floors for this revision
-	floors, err := s.floorRepo.GetByGraphRevisionID(ctx, draft.ID)
+	floors, err := s.floorRepo.GetByGraphRevisionID(ctx, revisionID)
 	if err != nil {
 		return nil, err
 	}
@@ -335,40 +328,44 @@ func (s *graphService) DeleteConnection(ctx context.Context, fromID, toID uuid.U
 // 4. WORKFLOW (EDITOR & PUBLISH)
 // =================================================================
 
-// GetEditorData: Mengambil data DRAFT lengkap untuk ditampilkan di Canvas Web Admin
-func (s *graphService) GetEditorData(ctx context.Context, venueID uuid.UUID) (*models.ManifestResponse, error) {
-	// 1. Ambil Draft (Auto-create jika tidak ada)
-	draft, err := s.revisionRepo.GetDraftByVenueID(ctx, venueID)
+func (s *graphService) GetEditorDataByRevision(ctx context.Context, revisionID uuid.UUID) (*models.ManifestResponse, error) {
+	// 1. Ambil revision by ID
+	revision, err := s.revisionRepo.GetByID(ctx, revisionID)
 	if err != nil {
-		draft, err = s.revisionRepo.CreateDraft(ctx, venueID)
-		if err != nil {
-			return nil, err
-		}
-		// Draft baru pasti kosong, return struktur kosong
-		return &models.ManifestResponse{
-			VenueID:     venueID,
-			VenueName:   "",
-			LastUpdated: draft.CreatedAt,
-			StartNodeID: uuid.Nil,
-			Floors:      []models.FloorData{}, // Explicit empty array
-		}, nil
+		return nil, errors.New("revision not found")
 	}
 
-	// 2. Mapping Entity GraphRevision -> DTO ManifestResponse
-	// Logic mapping ini mirip dengan GetMobileManifest, tapi sumber datanya adalah DRAFT
+	// 2. Load floors for this revision
+	floors, err := s.floorRepo.GetByGraphRevisionID(ctx, revisionID)
+	if err != nil {
+		return nil, err
+	}
 
+	// 3. Mapping Entity GraphRevision -> DTO ManifestResponse
 	var startNodeID uuid.UUID
-	if draft.StartNodeID != nil {
-		startNodeID = *draft.StartNodeID
+	if revision.StartNodeID != nil {
+		startNodeID = *revision.StartNodeID
 	}
 
 	var floorDTOs []models.FloorData
-	for _, floor := range draft.Floors {
+	for _, floor := range floors {
+		// Load nodes for this floor
+		nodes, err := s.graphRepo.GetNodesByFloorID(ctx, floor.ID)
+		if err != nil {
+			return nil, err
+		}
+
 		var nodeDTOs []models.NodeData
-		for _, node := range floor.Nodes {
+		for _, node := range nodes {
+			// Load edges for this node
+			edges, err := s.graphRepo.GetEdgesFromNode(ctx, node.ID)
+			if err != nil {
+				return nil, err
+			}
+
 			// Mapping Neighbors
 			var neighborDTOs []models.NeighborData
-			for _, edge := range node.OutgoingEdges {
+			for _, edge := range edges {
 				neighborDTOs = append(neighborDTOs, models.NeighborData{
 					TargetNodeID: edge.ToNodeID,
 					Heading:      edge.Heading,
@@ -424,22 +421,22 @@ func (s *graphService) GetEditorData(ctx context.Context, venueID uuid.UUID) (*m
 
 	// Ambil nama venue
 	venueName := ""
-	if venue, err := s.venueRepo.GetByID(ctx, venueID); err == nil {
+	if venue, err := s.venueRepo.GetByID(ctx, revision.VenueID); err == nil {
 		venueName = venue.Name
 	}
 
 	return &models.ManifestResponse{
-		VenueID:     venueID,
+		VenueID:     revision.VenueID,
 		VenueName:   venueName,
-		LastUpdated: draft.CreatedAt,
+		LastUpdated: revision.CreatedAt,
 		StartNodeID: startNodeID,
 		Floors:      floorDTOs,
 	}, nil
 }
 
-func (s *graphService) PublishChanges(ctx context.Context, revisionID uuid.UUID, req models.PublishDraftRequest) error {
+func (s *graphService) PublishChanges(ctx context.Context, req models.PublishDraftRequest) error {
 	// Get the draft to validate it has content
-	draft, err := s.revisionRepo.GetByID(ctx, revisionID)
+	draft, err := s.revisionRepo.GetByID(ctx, req.RevisionID)
 	if err != nil {
 		return errors.New("draft revision not found")
 	}
@@ -476,7 +473,7 @@ func (s *graphService) PublishChanges(ctx context.Context, revisionID uuid.UUID,
 	}
 
 	// Proceed with publishing
-	if err := s.revisionRepo.PublishDraft(ctx, revisionID, req.Note); err != nil {
+	if err := s.revisionRepo.PublishDraft(ctx, req.RevisionID, req.Note); err != nil {
 		return err
 	}
 
@@ -497,8 +494,8 @@ func (s *graphService) PublishChanges(ctx context.Context, revisionID uuid.UUID,
 // 5. GRAPH REVISION MANAGEMENT
 // =================================================================
 
-func (s *graphService) CreateDraftRevision(ctx context.Context, venueID uuid.UUID) (*models.IDResponse, error) {
-	draft, err := s.revisionRepo.CreateDraft(ctx, venueID)
+func (s *graphService) CreateDraftRevision(ctx context.Context, venueID uuid.UUID, userID uuid.UUID) (*models.IDResponse, error) {
+	draft, err := s.revisionRepo.CreateDraft(ctx, venueID, userID)
 	if err != nil {
 		return nil, err
 	}
