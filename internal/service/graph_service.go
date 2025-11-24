@@ -68,9 +68,13 @@ func (s *graphService) CreateFloor(ctx context.Context, venueID uuid.UUID, req m
 }
 
 func (s *graphService) UpdateFloor(ctx context.Context, floorID uuid.UUID, req models.UpdateFloorRequest) error {
-	// A. Security Check: Pastikan Floor ini milik DRAFT
-	if _, err := s.revisionRepo.GetDraftByFloorID(ctx, floorID); err != nil {
-		return errors.New("cannot edit floor: it belongs to a published version or does not exist")
+	// A. Security Check: Pastikan Floor ini milik DRAFT dan tidak immutable
+	revision, err := s.revisionRepo.GetDraftByFloorID(ctx, floorID)
+	if err != nil {
+		return errors.New("cannot edit floor: it belongs to a published or immutable version or does not exist")
+	}
+	if revision.IsImmutable {
+		return errors.New("cannot edit floor: revision is immutable")
 	}
 
 	// B. Update floor properties
@@ -428,11 +432,15 @@ func (s *graphService) GetEditorData(ctx context.Context, venueID uuid.UUID) (*m
 	}, nil
 }
 
-func (s *graphService) PublishChanges(ctx context.Context, venueID uuid.UUID, req models.PublishDraftRequest) error {
+func (s *graphService) PublishChanges(ctx context.Context, revisionID uuid.UUID, req models.PublishDraftRequest) error {
 	// Get the draft to validate it has content
-	draft, err := s.revisionRepo.GetDraftByVenueID(ctx, venueID)
+	draft, err := s.revisionRepo.GetByID(ctx, revisionID)
 	if err != nil {
-		return errors.New("no draft revision found to publish")
+		return errors.New("draft revision not found")
+	}
+
+	if draft.Status != entity.StatusDraft {
+		return errors.New("only draft revisions can be published")
 	}
 
 	// Validate draft has at least one floor with nodes
@@ -463,7 +471,7 @@ func (s *graphService) PublishChanges(ctx context.Context, venueID uuid.UUID, re
 	}
 
 	// Proceed with publishing
-	return s.revisionRepo.PublishDraft(ctx, venueID, req.Note)
+	return s.revisionRepo.PublishDraft(ctx, revisionID, req.Note)
 }
 
 // =================================================================
@@ -596,4 +604,117 @@ func (s *graphService) DeleteRevision(ctx context.Context, revisionID uuid.UUID)
 
 	// Delete the revision (cascade will handle floors, nodes, edges)
 	return s.revisionRepo.Delete(ctx, revisionID)
+}
+
+func (s *graphService) DeepCopyRevision(ctx context.Context, sourceRevisionID, targetVenueID uuid.UUID, note string) (*models.IDResponse, error) {
+	// Get source revision
+	source, err := s.revisionRepo.GetByID(ctx, sourceRevisionID)
+	if err != nil {
+		return nil, errors.New("source revision not found")
+	}
+
+	// Get target venue to check organization
+	targetVenue, err := s.venueRepo.GetByID(ctx, targetVenueID)
+	if err != nil {
+		return nil, errors.New("target venue not found")
+	}
+
+	// Auth check: ensure same organization
+	if source.OrganizationID != targetVenue.OrganizationID {
+		return nil, errors.New("cannot copy revision: source and target must be in the same organization")
+	}
+
+	// Create new draft revision for target venue
+	newRevision := entity.GraphRevision{
+		OrganizationID: targetVenue.OrganizationID,
+		CreatedByID:    source.CreatedByID, // Or get from context, but for now use source
+		VenueID:        targetVenueID,
+		Status:         entity.StatusDraft,
+		Note:           note,
+		StartNodeID:    source.StartNodeID,
+	}
+
+	if err := s.revisionRepo.Create(ctx, &newRevision); err != nil {
+		return nil, err
+	}
+
+	// Deep copy floors, nodes, edges
+	floors, err := s.floorRepo.GetByGraphRevisionID(ctx, sourceRevisionID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, floor := range floors {
+		newFloor := entity.Floor{
+			GraphRevisionID: newRevision.ID,
+			VenueID:         targetVenueID,
+			Name:            floor.Name,
+			LevelIndex:      floor.LevelIndex,
+			MapImageID:      floor.MapImageID,
+			MapWidth:        floor.MapWidth,
+			MapHeight:       floor.MapHeight,
+			PixelsPerMeter:  floor.PixelsPerMeter,
+			IsActive:        floor.IsActive,
+		}
+
+		if err := s.floorRepo.Create(ctx, &newFloor); err != nil {
+			return nil, err
+		}
+
+		// Copy nodes and edges for this floor
+		nodes, err := s.graphRepo.GetNodesByFloorID(ctx, floor.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		nodeIDMap := make(map[uuid.UUID]uuid.UUID) // old -> new node ID
+
+		for _, node := range nodes {
+			newNode := entity.GraphNode{
+				FloorID:         newFloor.ID,
+				X:               node.X,
+				Y:               node.Y,
+				AreaID:          node.AreaID,
+				PanoramaAssetID: node.PanoramaAssetID,
+				RotationOffset:  node.RotationOffset,
+				Label:           node.Label,
+				Properties:      node.Properties,
+				IsActive:        node.IsActive,
+			}
+
+			if err := s.graphRepo.CreateNode(ctx, &newNode); err != nil {
+				return nil, err
+			}
+
+			nodeIDMap[node.ID] = newNode.ID
+		}
+
+		// Copy edges
+		for _, node := range nodes {
+			edges, err := s.graphRepo.GetEdgesFromNode(ctx, node.ID)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, edge := range edges {
+				newFromID := nodeIDMap[edge.FromNodeID]
+				newToID := nodeIDMap[edge.ToNodeID]
+
+				newEdge := entity.GraphEdge{
+					FromNodeID: newFromID,
+					ToNodeID:   newToID,
+					Heading:    edge.Heading,
+					Distance:   edge.Distance,
+					Type:       edge.Type,
+					IsActive:   edge.IsActive,
+				}
+
+				if err := s.graphRepo.CreateEdge(ctx, &newEdge); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	return &models.IDResponse{ID: newRevision.ID}, nil
 }

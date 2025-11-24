@@ -69,5 +69,6 @@ type GraphRevision struct {
 	Note      string
 	StartNodeID *uuid.UUID      `gorm:"index" json:"start_node_id"`
 	StartNode   *GraphNode `gorm:"foreignKey:StartNodeID"`
-	Floors    []Floor `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Floors    []Floor `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	IsImmutable bool `gorm:"default:false"` // Prevent edits on published revisions
 }

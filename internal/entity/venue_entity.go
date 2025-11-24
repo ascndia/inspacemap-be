@@ -20,8 +20,8 @@ type Venue struct {
 	Longitude        float64          `gorm:"type:decimal(11,8);index"`
 	LiveRevisionID   uuid.UUID        `gorm:"index;not null"`
 	LiveRevision     *GraphRevision   `gorm:"foreignKey:LiveRevisionID"`
-	DraftRevisionID  *uuid.UUID       `gorm:"index"`
-	DraftRevision    *GraphRevision   `gorm:"foreignKey:DraftRevisionID"`
+	// DraftRevisionID  *uuid.UUID       `gorm:"index"` // Removed for multiple drafts support
+	// DraftRevision    *GraphRevision   `gorm:"foreignKey:DraftRevisionID"` // Removed
 	CoverImageID     *uuid.UUID
 	CoverImage       *MediaAsset        `gorm:"foreignKey:CoverImageID"`
 	Gallery          []VenueGalleryItem `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`

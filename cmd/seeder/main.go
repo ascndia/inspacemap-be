@@ -231,7 +231,7 @@ func seedDevelopmentData(db *gorm.DB) {
 		draftRevision.VenueID = venue.ID
 		db.Create(&draftRevision)
 		venue.LiveRevisionID = draftRevision.ID
-		venue.DraftRevisionID = &draftRevision.ID
+		// venue.DraftRevisionID = &draftRevision.ID // Removed for multiple drafts
 		db.Create(&venue)
 		log.Printf("Created Venue: %s", venue.Name)
 	}

@@ -98,3 +98,20 @@ type VenueQueryCursor struct {
 	Limit  *int    `json:"limit,omitempty"`
 	Cursor *string `json:"cursor,omitempty"`
 }
+
+type MobileManifest struct {
+	VenueID     uuid.UUID     `json:"venue_id"`
+	VenueName   string        `json:"venue_name"`
+	Slug        string        `json:"slug"`
+	Description string        `json:"description"`
+	Address     string        `json:"address"`
+	City        string        `json:"city"`
+	Province    string        `json:"province"`
+	PostalCode  string        `json:"postal_code"`
+	Coordinates GeoPoint      `json:"coordinates"`
+	CoverImageURL string       `json:"cover_image_url,omitempty"`
+	Gallery     []VenueGalleryDetail `json:"gallery"`
+	LastUpdated time.Time     `json:"last_updated"`
+	StartNodeID uuid.UUID     `json:"start_node_id"`
+	Floors      []FloorData   `json:"floors"`
+}

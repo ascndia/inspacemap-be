@@ -183,14 +183,15 @@ func (r *revisionRepo) CreateDraft(ctx context.Context, venueID uuid.UUID) (*ent
 		Note:    "Auto-generated draft",
 	}
 
-	// 3. Transaction: Simpan Revisi -> Update Pointer Venue
+	// Transaction: Simpan Revisi -> Update Pointer Venue
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&newDraft).Error; err != nil {
 			return err
 		}
-		// Update field draft_revision_id di tabel Venue
-		return tx.Model(&entity.Venue{BaseEntity: entity.BaseEntity{ID: venueID}}).
-			Update("draft_revision_id", newDraft.ID).Error
+		// Update field draft_revision_id di tabel Venue (removed for multiple drafts)
+		// return tx.Model(&entity.Venue{BaseEntity: entity.BaseEntity{ID: venueID}}).
+		//	Update("draft_revision_id", newDraft.ID).Error
+		return nil
 	})
 
 	return &newDraft, err
@@ -299,34 +300,30 @@ func (r *revisionRepo) CreateDraft(ctx context.Context, venueID uuid.UUID) (*ent
 // }
 
 // PublishDraft: Deep Copy Logic
-func (r *revisionRepo) PublishDraft(ctx context.Context, venueID uuid.UUID, note string) error {
+func (r *revisionRepo) PublishDraft(ctx context.Context, revisionID uuid.UUID, note string) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// 1. Ambil Venue untuk validasi
-		var venue entity.Venue
-		if err := tx.First(&venue, "id = ?", venueID).Error; err != nil {
-			return err
-		}
-		if venue.DraftRevisionID == nil {
-			return errors.New("no draft to publish")
-		}
-
-		// 2. Load Data Draft Lengkap (termasuk edges)
+		// 1. Ambil Draft
 		var draft entity.GraphRevision
-		if err := tx.Preload("Floors.Nodes.OutgoingEdges").First(&draft, "id = ?", *venue.DraftRevisionID).Error; err != nil {
+		if err := tx.Preload("Floors.Nodes.OutgoingEdges").First(&draft, "id = ?", revisionID).Error; err != nil {
 			return err
 		}
 
-		// 3. Buat Revisi Baru (LIVE)
+		if draft.Status != entity.StatusDraft {
+			return errors.New("only drafts can be published")
+		}
+
+		// 2. Buat Revisi Baru (LIVE)
 		newLiveRev := entity.GraphRevision{
-			VenueID: venueID,
-			Status:  entity.StatusPublished,
-			Note:    note,
+			VenueID:        draft.VenueID,
+			OrganizationID: draft.OrganizationID,
+			Status:         entity.StatusPublished,
+			Note:           note,
 		}
 		if err := tx.Create(&newLiveRev).Error; err != nil {
 			return err
 		}
 
-		// 4. CLONING (Mapping UUID Lama -> UUID Baru)
+		// 3. CLONING (Mapping UUID Lama -> UUID Baru)
 		nodeIDMap := make(map[uuid.UUID]uuid.UUID)
 		var newStartNodeID *uuid.UUID
 
@@ -334,7 +331,7 @@ func (r *revisionRepo) PublishDraft(ctx context.Context, venueID uuid.UUID, note
 			// Clone Floor
 			newFloor := entity.Floor{
 				GraphRevisionID: newLiveRev.ID,
-				VenueID:         venueID,
+				VenueID:         draft.VenueID,
 				Name:            floor.Name,
 				LevelIndex:      floor.LevelIndex,
 				MapImageID:      floor.MapImageID,
@@ -374,7 +371,7 @@ func (r *revisionRepo) PublishDraft(ctx context.Context, venueID uuid.UUID, note
 			}
 		}
 
-		// 5. Reconstruct Edges
+		// 4. Reconstruct Edges
 		for _, floor := range draft.Floors {
 			for _, node := range floor.Nodes {
 				for _, edge := range node.OutgoingEdges {
@@ -397,13 +394,18 @@ func (r *revisionRepo) PublishDraft(ctx context.Context, venueID uuid.UUID, note
 			}
 		}
 
-		// 6. Finalisasi Pointer
+		// 5. Finalisasi Pointer
 		if newStartNodeID != nil {
 			tx.Model(&newLiveRev).Update("start_node_id", *newStartNodeID)
 		}
 
 		// Update Venue agar menunjuk ke Live Revision yang baru
-		if err := tx.Model(&venue).Update("live_revision_id", newLiveRev.ID).Error; err != nil {
+		if err := tx.Model(&entity.Venue{BaseEntity: entity.BaseEntity{ID: draft.VenueID}}).Update("live_revision_id", newLiveRev.ID).Error; err != nil {
+			return err
+		}
+
+		// Set live revision as immutable
+		if err := tx.Model(&newLiveRev).Update("is_immutable", true).Error; err != nil {
 			return err
 		}
 

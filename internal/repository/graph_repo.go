@@ -113,3 +113,19 @@ func (r *graphRepo) CountAreasByFloorID(ctx context.Context, floorID uuid.UUID) 
 		Count(&count).Error
 	return int(count), err
 }
+
+func (r *graphRepo) GetNodesByFloorID(ctx context.Context, floorID uuid.UUID) ([]entity.GraphNode, error) {
+	var nodes []entity.GraphNode
+	err := r.db.WithContext(ctx).Preload("Panorama").Preload("Area").Where("floor_id = ?", floorID).Find(&nodes).Error
+	return nodes, err
+}
+
+func (r *graphRepo) GetEdgesFromNode(ctx context.Context, nodeID uuid.UUID) ([]entity.GraphEdge, error) {
+	var edges []entity.GraphEdge
+	err := r.db.WithContext(ctx).Preload("ToNode").Where("from_node_id = ?", nodeID).Find(&edges).Error
+	return edges, err
+}
+
+func (r *graphRepo) CreateEdge(ctx context.Context, edge *entity.GraphEdge) error {
+	return r.db.WithContext(ctx).Create(edge).Error
+}

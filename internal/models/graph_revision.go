@@ -28,3 +28,9 @@ type CursorGraphRevisionQuery struct {
 	Limit  *int    `json:"limit,omitempty"`
 	Cursor *string `json:"cursor,omitempty"`
 }
+
+type DeepCopyRevisionRequest struct {
+	SourceRevisionID uuid.UUID `json:"source_revision_id" validate:"required"`
+	TargetVenueID    uuid.UUID `json:"target_venue_id" validate:"required"`
+	Note             string    `json:"note"`
+}

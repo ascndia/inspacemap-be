@@ -40,7 +40,7 @@ type GraphService interface {
 	DeleteNode(ctx context.Context, nodeID uuid.UUID) error
 	DeleteConnection(ctx context.Context, fromID, toID uuid.UUID) error
 	GetEditorData(ctx context.Context, venueID uuid.UUID) (*models.ManifestResponse, error)
-	PublishChanges(ctx context.Context, venueID uuid.UUID, req models.PublishDraftRequest) error
+	PublishChanges(ctx context.Context, revisionID uuid.UUID, req models.PublishDraftRequest) error
 
 	// Graph Revision Management
 	CreateDraftRevision(ctx context.Context, venueID uuid.UUID) (*models.IDResponse, error)
@@ -48,6 +48,7 @@ type GraphService interface {
 	GetRevisionDetail(ctx context.Context, revisionID uuid.UUID) (*models.GraphRevisionDetail, error)
 	UpdateRevision(ctx context.Context, revisionID uuid.UUID, req models.UpdateRevisionRequest) error
 	DeleteRevision(ctx context.Context, revisionID uuid.UUID) error
+	DeepCopyRevision(ctx context.Context, sourceRevisionID, targetVenueID uuid.UUID, note string) (*models.IDResponse, error)
 }
 
 type OrganizationService interface {
@@ -86,7 +87,7 @@ type VenueService interface {
 	GetVenueDetail(ctx context.Context, id uuid.UUID) (*models.VenueDetail, error)
 	GetVenueBySlug(ctx context.Context, slug string) (*models.VenueDetail, error)
 	ListVenues(ctx context.Context, query models.VenueQuery) ([]models.VenueListItem, int64, error)
-	GetMobileManifest(ctx context.Context, slug string) (*models.ManifestResponse, error)
+	GetMobileManifest(ctx context.Context, orgSlug, venueSlug string) (*models.MobileManifest, error)
 }
 type VenueGalleryService interface {
 	ReorderGallery(ctx context.Context, req models.ReorderVenueGalleryRequest) error

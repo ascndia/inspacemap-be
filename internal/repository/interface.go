@@ -74,7 +74,7 @@ type VenueRepository interface {
 	BaseRepository[entity.Venue, uuid.UUID]
 	GetBySlug(ctx context.Context, slug string) (*entity.Venue, error)
 	GetByOrganizationID(ctx context.Context, orgID uuid.UUID) ([]entity.Venue, error)
-	GetLiveManifestData(venueSlug string) (*entity.Venue, error)
+	GetLiveManifestData(ctx context.Context, orgSlug, venueSlug string) (*entity.Venue, error)
 	FilterVenues(ctx context.Context, filter models.VenueFilter) ([]entity.Venue, error)
 	PagedVenues(ctx context.Context, query models.VenueQuery) ([]entity.Venue, int64, error)
 	CursorVenues(ctx context.Context, query models.VenueQueryCursor) ([]entity.Venue, string, error)
@@ -101,6 +101,9 @@ type GraphRepository interface {
 	DeleteEdge(ctx context.Context, fromID, toID uuid.UUID) error
 	CountNodesByFloorID(ctx context.Context, floorID uuid.UUID) (int, error)
 	CountAreasByFloorID(ctx context.Context, floorID uuid.UUID) (int, error)
+	GetNodesByFloorID(ctx context.Context, floorID uuid.UUID) ([]entity.GraphNode, error)
+	GetEdgesFromNode(ctx context.Context, nodeID uuid.UUID) ([]entity.GraphEdge, error)
+	CreateEdge(ctx context.Context, edge *entity.GraphEdge) error
 }
 
 type GraphRevisionRepository interface {

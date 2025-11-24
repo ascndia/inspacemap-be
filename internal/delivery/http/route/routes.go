@@ -28,7 +28,7 @@ func (c *RouteConfig) Setup() {
 	auth.Post("/register", c.AuthHandler.Register)
 	auth.Post("/invite/accept", c.AuthHandler.AcceptInvite)
 
-	api.Get("/venues/:slug/manifest", c.VenueHandler.GetManifest)
+	api.Get("/venues/:orgSlug/:venueSlug/manifest", c.VenueHandler.GetManifest)
 	api.Get("/areas/:id", c.AreaHandler.GetDetail)
 
 	protected := api.Group("/", middleware.Protected())
