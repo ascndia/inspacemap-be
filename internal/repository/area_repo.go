@@ -151,11 +151,11 @@ func (r *areaRepo) buildFilterQuery(ctx context.Context, f models.AreaFilter) *g
 	}
 
 	if f.VenueID != nil {
-		db = db.Where("venue_id = ?", *f.VenueID)
+		db = db.Where("areas.venue_id = ?", *f.VenueID)
 	}
 
 	if f.FloorID != nil {
-		db = db.Where("floor_id = ?", *f.FloorID)
+		db = db.Where("areas.floor_id = ?", *f.FloorID)
 	}
 
 	if f.RevisionID != nil {
@@ -164,23 +164,23 @@ func (r *areaRepo) buildFilterQuery(ctx context.Context, f models.AreaFilter) *g
 	}
 
 	if f.Name != nil {
-		db = db.Where("name ILIKE ?", "%"+*f.Name+"%")
+		db = db.Where("areas.name ILIKE ?", "%"+*f.Name+"%")
 	}
 
 	if f.Slug != nil {
-		db = db.Where("slug = ?", *f.Slug)
+		db = db.Where("areas.slug = ?", *f.Slug)
 	}
 
 	if f.Label != nil {
-		db = db.Where("label ILIKE ?", "%"+*f.Label+"%")
+		db = db.Where("areas.label ILIKE ?", "%"+*f.Label+"%")
 	}
 
 	if f.Category != nil {
-		db = db.Where("category = ?", *f.Category)
+		db = db.Where("areas.category = ?", *f.Category)
 	}
 
 	if f.Description != nil {
-		db = db.Where("description ILIKE ?", "%"+*f.Description+"%")
+		db = db.Where("areas.description ILIKE ?", "%"+*f.Description+"%")
 	}
 
 	return db
