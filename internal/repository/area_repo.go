@@ -161,6 +161,18 @@ func (r *areaRepo) buildFilterQuery(ctx context.Context, f models.AreaFilter) *g
 	if f.RevisionID != nil {
 		db = db.Joins("JOIN floors ON floors.id = areas.floor_id").
 			Where("floors.graph_revision_id = ?", *f.RevisionID)
+	} else if f.Status != nil {
+		// If no specific revision_id but status is provided, filter by revision status
+		db = db.Joins("JOIN floors ON floors.id = areas.floor_id").
+			Joins("JOIN graph_revisions ON graph_revisions.id = floors.graph_revision_id")
+		switch *f.Status {
+		case "published":
+			db = db.Where("graph_revisions.status = ?", "published")
+		case "draft":
+			db = db.Where("graph_revisions.status = ?", "draft")
+		case "all":
+			// No additional filter - show all areas regardless of revision status
+		}
 	}
 
 	if f.Name != nil {

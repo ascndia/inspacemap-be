@@ -131,8 +131,14 @@ func (h *AreaHandler) ListAreas(c *fiber.Ctx) error {
 		if revisionID, err := uuid.Parse(revisionIDStr); err == nil {
 			query.RevisionID = &revisionID
 		}
-	} else {
-		// If no revision_id provided, default to the venue's live revision
+	}
+
+	if status := c.Query("status"); status != "" {
+		if status == "published" || status == "draft" || status == "all" {
+			query.Status = &status
+		}
+	} else if query.RevisionID == nil {
+		// If no revision_id and no status provided, default to the venue's live revision
 		if venueID != uuid.Nil {
 			venueDetail, err := h.venueService.GetVenueDetail(c.Context(), venueID)
 			if err == nil && venueDetail.LiveRevisionID != uuid.Nil {

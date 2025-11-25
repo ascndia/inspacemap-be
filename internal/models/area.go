@@ -80,6 +80,7 @@ type AreaFilter struct {
 	Label          *string    `json:"label,omitempty"`
 	Description    *string    `json:"description,omitempty"`
 	Category       *string    `json:"category,omitempty"`
+	Status         *string    `json:"status,omitempty"` // "published", "draft", "all"
 }
 
 type AreaQuery struct {
@@ -87,6 +88,7 @@ type AreaQuery struct {
 	Limit  *int    `json:"limit,omitempty"`
 	Offset *int    `json:"offset,omitempty"`
 	Sort   *string `json:"sort,omitempty"`
+	Status *string `json:"status,omitempty"` // "published", "draft", "all"
 }
 
 type AreaQueryCursor struct {
