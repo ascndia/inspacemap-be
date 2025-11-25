@@ -7,6 +7,11 @@ type GeoPoint struct {
 	Longitude float64 `json:"longitude"`
 }
 
+type BoundaryPoint struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
+
 type CreateAreaRequest struct {
 	Name         string            `json:"name" validate:"required"`
 	FloorID      *uuid.UUID        `json:"floor_id"`
@@ -14,8 +19,7 @@ type CreateAreaRequest struct {
 	Category     string            `json:"category"`
 	Latitude     float64           `json:"latitude"`
 	Longitude    float64           `json:"longitude"`
-	MapX         float64           `json:"map_x"`
-	MapY         float64           `json:"map_y"`
+	Boundary     []BoundaryPoint   `json:"boundary"`
 	CoverImageID *uuid.UUID        `json:"cover_image_id"`
 	Gallery      []AreaItemRequest `json:"gallery"`
 }
@@ -59,4 +63,12 @@ type AreaQueryCursor struct {
 	AreaFilter
 	Limit  *int    `json:"limit,omitempty"`
 	Cursor *string `json:"cursor,omitempty"`
+}
+
+type SetStartNodeRequest struct {
+	NodeID uuid.UUID `json:"node_id" validate:"required"`
+}
+
+type SetStartNodeResponse struct {
+	Warning string `json:"warning,omitempty"`
 }

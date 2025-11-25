@@ -102,6 +102,7 @@ type GraphRepository interface {
 	CountNodesByFloorID(ctx context.Context, floorID uuid.UUID) (int, error)
 	CountAreasByFloorID(ctx context.Context, floorID uuid.UUID) (int, error)
 	GetNodesByFloorID(ctx context.Context, floorID uuid.UUID) ([]entity.GraphNode, error)
+	GetNodeByID(ctx context.Context, id uuid.UUID) (*entity.GraphNode, error)
 	GetEdgesFromNode(ctx context.Context, nodeID uuid.UUID) ([]entity.GraphEdge, error)
 	CreateEdge(ctx context.Context, edge *entity.GraphEdge) error
 }
@@ -131,6 +132,8 @@ type AreaRepository interface {
 	BaseRepository[entity.Area, uuid.UUID]
 	GetByVenueID(ctx context.Context, venueID uuid.UUID) ([]entity.Area, error)
 	GetByFloorID(ctx context.Context, floorID uuid.UUID) ([]entity.Area, error)
+	GetByRevisionID(ctx context.Context, revisionID uuid.UUID) ([]entity.Area, error)
+	GetAreaWithDetails(ctx context.Context, id uuid.UUID) (*entity.Area, error)
 	GetByOrganizationID(ctx context.Context, orgID uuid.UUID) ([]entity.Area, error)
 	FilterAreas(ctx context.Context, filter models.AreaFilter) ([]entity.Area, error)
 	PagedAreas(ctx context.Context, query models.AreaQuery) ([]entity.Area, int64, error)

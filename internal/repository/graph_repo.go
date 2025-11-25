@@ -126,6 +126,12 @@ func (r *graphRepo) GetEdgesFromNode(ctx context.Context, nodeID uuid.UUID) ([]e
 	return edges, err
 }
 
+func (r *graphRepo) GetNodeByID(ctx context.Context, id uuid.UUID) (*entity.GraphNode, error) {
+	var node entity.GraphNode
+	err := r.db.WithContext(ctx).Preload("Panorama").Preload("Area").Where("id = ?", id).First(&node).Error
+	return &node, err
+}
+
 func (r *graphRepo) CreateEdge(ctx context.Context, edge *entity.GraphEdge) error {
 	return r.db.WithContext(ctx).Create(edge).Error
 }

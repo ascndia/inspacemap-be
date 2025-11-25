@@ -39,6 +39,28 @@ func (r *areaRepo) GetByFloorID(ctx context.Context, floorID uuid.UUID) ([]entit
 	return areas, err
 }
 
+func (r *areaRepo) GetByRevisionID(ctx context.Context, revisionID uuid.UUID) ([]entity.Area, error) {
+	var areas []entity.Area
+	err := r.db.WithContext(ctx).
+		Preload("CoverImage").
+		Preload("StartNode").
+		Preload("Gallery").
+		Where("graph_revision_id = ?", revisionID).
+		Find(&areas).Error
+	return areas, err
+}
+
+func (r *areaRepo) GetAreaWithDetails(ctx context.Context, id uuid.UUID) (*entity.Area, error) {
+	var area entity.Area
+	err := r.db.WithContext(ctx).
+		Preload("CoverImage").
+		Preload("StartNode").
+		Preload("Gallery").
+		Where("id = ?", id).
+		First(&area).Error
+	return &area, err
+}
+
 func (r *areaRepo) GetByOrganizationID(ctx context.Context, orgID uuid.UUID) ([]entity.Area, error) {
 	var areas []entity.Area
 	err := r.db.WithContext(ctx).
@@ -128,7 +150,7 @@ func (r *areaRepo) buildFilterQuery(ctx context.Context, f models.AreaFilter) *g
 	if f.VenueID != nil {
 		db = db.Where("venue_id = ?", *f.VenueID)
 	}
-	
+
 	if f.FloorID != nil {
 		db = db.Where("floor_id = ?", *f.FloorID)
 	}
@@ -136,19 +158,19 @@ func (r *areaRepo) buildFilterQuery(ctx context.Context, f models.AreaFilter) *g
 	if f.Name != nil {
 		db = db.Where("name ILIKE ?", "%"+*f.Name+"%")
 	}
-	
+
 	if f.Slug != nil {
 		db = db.Where("slug = ?", *f.Slug)
 	}
-	
+
 	if f.Label != nil {
 		db = db.Where("label ILIKE ?", "%"+*f.Label+"%")
 	}
-	
+
 	if f.Category != nil {
 		db = db.Where("category = ?", *f.Category)
 	}
-	
+
 	if f.Description != nil {
 		db = db.Where("description ILIKE ?", "%"+*f.Description+"%")
 	}

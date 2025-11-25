@@ -78,6 +78,7 @@ type AreaService interface {
 	DeleteArea(ctx context.Context, id uuid.UUID) error
 	GetAreaDetail(ctx context.Context, id uuid.UUID) (*models.AreaDetail, error)
 	GetVenueAreas(ctx context.Context, venueID uuid.UUID) ([]models.AreaPinDetail, error)
+	SetAreaStartNode(ctx context.Context, areaID uuid.UUID, req models.SetStartNodeRequest) (*models.SetStartNodeResponse, error)
 }
 
 type VenueService interface {

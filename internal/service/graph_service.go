@@ -19,6 +19,7 @@ type graphService struct {
 	floorRepo    repository.FloorRepository
 	venueRepo    repository.VenueRepository
 	mediaRepo    repository.MediaAssetRepository
+	areaRepo     repository.AreaRepository
 	redis        *redis.Client
 }
 
@@ -28,6 +29,7 @@ func NewGraphService(
 	fRepo repository.FloorRepository,
 	vRepo repository.VenueRepository,
 	mRepo repository.MediaAssetRepository,
+	aRepo repository.AreaRepository,
 	redisClient *redis.Client,
 ) GraphService {
 	return &graphService{
@@ -36,6 +38,7 @@ func NewGraphService(
 		floorRepo:    fRepo,
 		venueRepo:    vRepo,
 		mediaRepo:    mRepo,
+		areaRepo:     aRepo,
 		redis:        redisClient,
 	}
 }
@@ -641,10 +644,10 @@ func (s *graphService) DeepCopyRevision(ctx context.Context, sourceRevisionID, t
 		return nil, errors.New("cannot copy revision: source and target must be in the same organization")
 	}
 
-	// Create new draft revision for target venue
+	// 1. Clone Revision
 	newRevision := entity.GraphRevision{
 		OrganizationID: targetVenue.OrganizationID,
-		CreatedByID:    source.CreatedByID, // Or get from context, but for now use source
+		CreatedByID:    source.CreatedByID,
 		VenueID:        targetVenueID,
 		Status:         entity.StatusDraft,
 		Note:           note,
@@ -655,12 +658,13 @@ func (s *graphService) DeepCopyRevision(ctx context.Context, sourceRevisionID, t
 		return nil, err
 	}
 
-	// Deep copy floors, nodes, edges
+	// 2. Clone Floors
 	floors, err := s.floorRepo.GetByGraphRevisionID(ctx, sourceRevisionID)
 	if err != nil {
 		return nil, err
 	}
 
+	floorIDMap := make(map[uuid.UUID]uuid.UUID)
 	for _, floor := range floors {
 		newFloor := entity.Floor{
 			GraphRevisionID: newRevision.ID,
@@ -678,20 +682,64 @@ func (s *graphService) DeepCopyRevision(ctx context.Context, sourceRevisionID, t
 			return nil, err
 		}
 
-		// Copy nodes and edges for this floor
+		floorIDMap[floor.ID] = newFloor.ID
+	}
+
+	// 3. Clone Areas
+	areas, err := s.areaRepo.GetByRevisionID(ctx, sourceRevisionID)
+	if err != nil {
+		return nil, err
+	}
+
+	areaIDMap := make(map[uuid.UUID]uuid.UUID)
+	for _, area := range areas {
+		newFloorID := floorIDMap[area.FloorID]
+		newArea := entity.Area{
+			GraphRevisionID: newRevision.ID,
+			FloorID:         newFloorID,
+			VenueID:         targetVenueID,
+			Name:            area.Name,
+			Slug:            area.Slug,
+			Label:           area.Label,
+			Description:     area.Description,
+			Latitude:        area.Latitude,
+			Longitude:       area.Longitude,
+			Boundary:        area.Boundary,
+			LabelX:          area.LabelX,
+			LabelY:          area.LabelY,
+			Category:        area.Category,
+			CoverImageID:    area.CoverImageID,
+		}
+
+		if err := s.areaRepo.Create(ctx, &newArea); err != nil {
+			return nil, err
+		}
+
+		areaIDMap[area.ID] = newArea.ID
+	}
+
+	// 4. Clone Nodes
+	nodeIDMap := make(map[uuid.UUID]uuid.UUID)
+	for _, floor := range floors {
 		nodes, err := s.graphRepo.GetNodesByFloorID(ctx, floor.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		nodeIDMap := make(map[uuid.UUID]uuid.UUID) // old -> new node ID
-
+		newFloorID := floorIDMap[floor.ID]
 		for _, node := range nodes {
+			var newAreaID *uuid.UUID
+			if node.AreaID != nil {
+				if id, exists := areaIDMap[*node.AreaID]; exists {
+					newAreaID = &id
+				}
+			}
+
 			newNode := entity.GraphNode{
-				FloorID:         newFloor.ID,
+				FloorID:         newFloorID,
 				X:               node.X,
 				Y:               node.Y,
-				AreaID:          node.AreaID,
+				AreaID:          newAreaID,
 				PanoramaAssetID: node.PanoramaAssetID,
 				RotationOffset:  node.RotationOffset,
 				Label:           node.Label,
@@ -705,8 +753,15 @@ func (s *graphService) DeepCopyRevision(ctx context.Context, sourceRevisionID, t
 
 			nodeIDMap[node.ID] = newNode.ID
 		}
+	}
 
-		// Copy edges
+	// 5. Clone Edges
+	for _, floor := range floors {
+		nodes, err := s.graphRepo.GetNodesByFloorID(ctx, floor.ID)
+		if err != nil {
+			return nil, err
+		}
+
 		for _, node := range nodes {
 			edges, err := s.graphRepo.GetEdgesFromNode(ctx, node.ID)
 			if err != nil {
@@ -729,6 +784,22 @@ func (s *graphService) DeepCopyRevision(ctx context.Context, sourceRevisionID, t
 				if err := s.graphRepo.CreateEdge(ctx, &newEdge); err != nil {
 					return nil, err
 				}
+			}
+		}
+	}
+
+	// 6. Relink Area.StartNodeID
+	for _, area := range areas {
+		if area.StartNodeID != nil {
+			if newNodeID, exists := nodeIDMap[*area.StartNodeID]; exists {
+				newAreaID := areaIDMap[area.ID]
+				// Update the new area's start node
+				newArea, err := s.areaRepo.GetByID(ctx, newAreaID)
+				if err != nil {
+					continue // Skip if error
+				}
+				newArea.StartNodeID = &newNodeID
+				s.areaRepo.Update(ctx, newArea)
 			}
 		}
 	}

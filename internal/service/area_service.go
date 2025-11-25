@@ -10,45 +10,74 @@ import (
 	"github.com/google/uuid"
 )
 
+type Point struct {
+	X, Y float64
+}
+
+func IsPointInPolygon(p Point, polygon []Point) bool {
+	intersectCount := 0
+	j := len(polygon) - 1
+	for i := 0; i < len(polygon); i++ {
+		if (polygon[i].Y > p.Y) != (polygon[j].Y > p.Y) &&
+			(p.X < (polygon[j].X-polygon[i].X)*(p.Y-polygon[i].Y)/(polygon[j].Y-polygon[i].Y)+polygon[i].X) {
+			intersectCount++
+		}
+		j = i
+	}
+	return intersectCount%2 == 1
+}
+
 type areaService struct {
 	areaRepo    repository.AreaRepository
 	galleryRepo repository.AreaGalleryRepository
-	nodeRepo    repository.GraphRepository // Butuh ini untuk cari Nearest Node
+	nodeRepo    repository.GraphRepository
+	floorRepo   repository.FloorRepository // Need to get revision from floor
 }
 
 func NewAreaService(
 	aRepo repository.AreaRepository,
 	gRepo repository.AreaGalleryRepository,
-	nRepo repository.GraphRepository, // Asumsi ada method find nearest
+	nRepo repository.GraphRepository,
+	fRepo repository.FloorRepository,
 ) AreaService {
 	return &areaService{
 		areaRepo:    aRepo,
 		galleryRepo: gRepo,
 		nodeRepo:    nRepo,
+		floorRepo:   fRepo,
 	}
 }
 
 func (s *areaService) CreateArea(ctx context.Context, req models.CreateAreaRequest) (*models.IDResponse, error) {
-	// TODO: Validasi VenueID (biasanya dari URL param di handler, lalu inject ke struct req atau argumen terpisah)
-	// Asumsi req.VenueID sudah diisi dari handler
+	// 1. Resolve GraphRevisionID from Floor
+	if req.FloorID == nil {
+		return nil, errors.New("floor_id is required")
+	}
+	floor, err := s.floorRepo.GetByID(ctx, *req.FloorID)
+	if err != nil {
+		return nil, errors.New("floor not found")
+	}
 
-	// 1. Mapping DTO -> Entity
+	// 2. Parse Boundary points from DTO to Entity
+	boundary := make(entity.Boundary, len(req.Boundary))
+	for i, p := range req.Boundary {
+		boundary[i] = entity.BoundaryPoint{X: p.X, Y: p.Y}
+	}
+
+	// 3. Mapping DTO -> Entity
 	area := entity.Area{
-		Name:         req.Name,
-		Description:  req.Description,
-		Category:     req.Category,
-		Latitude:     req.Latitude,
-		Longitude:    req.Longitude,
-		MapX:         req.MapX,
-		MapY:         req.MapY,
-		CoverImageID: req.CoverImageID,
-		// FloorID & VenueID diisi dari context/req
-	}
-	if req.FloorID != nil {
-		area.FloorID = *req.FloorID // uuid pointer
+		Name:            req.Name,
+		Description:     req.Description,
+		Category:        req.Category,
+		Latitude:        req.Latitude,
+		Longitude:       req.Longitude,
+		Boundary:        boundary,
+		GraphRevisionID: floor.GraphRevisionID,
+		FloorID:         *req.FloorID,
+		CoverImageID:    req.CoverImageID,
 	}
 
-	// 2. Save
+	// 4. Save
 	if err := s.areaRepo.Create(ctx, &area); err != nil {
 		return nil, err
 	}
@@ -63,14 +92,19 @@ func (s *areaService) UpdateArea(ctx context.Context, id uuid.UUID, req models.C
 		return errors.New("area not found")
 	}
 
-	// 2. Update Fields
+	// 2. Parse Boundary
+	boundary := make(entity.Boundary, len(req.Boundary))
+	for i, p := range req.Boundary {
+		boundary[i] = entity.BoundaryPoint{X: p.X, Y: p.Y}
+	}
+
+	// 3. Update Fields
 	area.Name = req.Name
 	area.Description = req.Description
 	area.Category = req.Category
 	area.Latitude = req.Latitude
 	area.Longitude = req.Longitude
-	area.MapX = req.MapX
-	area.MapY = req.MapY
+	area.Boundary = boundary
 	area.CoverImageID = req.CoverImageID
 	if req.FloorID != nil {
 		area.FloorID = *req.FloorID
@@ -144,4 +178,46 @@ func (s *areaService) GetVenueAreas(ctx context.Context, venueID uuid.UUID) ([]m
 		})
 	}
 	return pins, nil
+}
+
+func (s *areaService) SetAreaStartNode(ctx context.Context, areaID uuid.UUID, req models.SetStartNodeRequest) (*models.SetStartNodeResponse, error) {
+	// 1. Get Area
+	area, err := s.areaRepo.GetAreaWithDetails(ctx, areaID)
+	if err != nil {
+		return nil, errors.New("area not found")
+	}
+
+	// 2. Get Node
+	node, err := s.nodeRepo.GetNodeByID(ctx, req.NodeID) // Assuming this method exists
+	if err != nil {
+		return nil, errors.New("node not found")
+	}
+
+	// 3. Validation 1: Ensure both are on the same Floor
+	if area.FloorID != node.FloorID {
+		return nil, errors.New("area and node must be on the same floor")
+	}
+
+	// 4. Validation 2: Run Ray Casting Algorithm
+	polygon := make([]Point, len(area.Boundary))
+	for i, bp := range area.Boundary {
+		polygon[i] = Point{X: bp.X, Y: bp.Y}
+	}
+	nodePoint := Point{X: node.X, Y: node.Y}
+	isInside := IsPointInPolygon(nodePoint, polygon)
+
+	// 5. Update start_node_id regardless
+	area.StartNodeID = &req.NodeID
+	err = s.areaRepo.Update(ctx, area)
+	if err != nil {
+		return nil, err
+	}
+
+	// 6. Return warning if outside
+	response := &models.SetStartNodeResponse{}
+	if !isInside {
+		response.Warning = "The selected node is outside the area boundary"
+	}
+
+	return response, nil
 }

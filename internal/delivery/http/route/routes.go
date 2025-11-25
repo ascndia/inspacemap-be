@@ -50,14 +50,10 @@ func (c *RouteConfig) Setup() {
 	venues.Get("/:id", c.VenueHandler.GetDetail)
 	venues.Put("/:id", c.VenueHandler.UpdateVenue)
 
-	// Venue Gallery endpoints
 	venues.Post("/:id/gallery", c.VenueGalleryHandler.AddItems)
 	venues.Put("/:id/gallery/reorder", c.VenueGalleryHandler.Reorder)
 	venues.Patch("/:id/gallery/:media_id", c.VenueGalleryHandler.UpdateItem)
 	venues.Delete("/:id/gallery/:media_id", c.VenueGalleryHandler.RemoveItem)
-
-	areas := tenant.Group("/areas")
-	areas.Post("/", c.AreaHandler.CreateArea)
 
 	tenant.Get("/venues/:venue_id/areas", c.AreaHandler.GetVenueAreas)
 
@@ -84,6 +80,9 @@ func (c *RouteConfig) Setup() {
 	editor.Get("/floors/:id", c.GraphHandler.GetFloor)
 	editor.Put("/floors/:id", c.GraphHandler.UpdateFloor)
 	editor.Delete("/floors/:id", c.GraphHandler.DeleteFloor)
+
+	editor.Post("/floors/:floor_id/areas", c.AreaHandler.CreateArea)
+	editor.Put("/areas/:id/start-node", c.AreaHandler.SetStartNode)
 
 	editor.Post("/nodes", c.GraphHandler.CreateNode)
 	editor.Put("/nodes/:id/position", c.GraphHandler.UpdateNodePosition)
