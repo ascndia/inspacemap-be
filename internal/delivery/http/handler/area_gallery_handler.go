@@ -66,3 +66,92 @@ func (h *AreaGalleryHandler) RemoveItem(c *fiber.Ctx) error {
 	}
 	return utils.SendSuccess(c, "Item removed")
 }
+
+// === NEW EDITOR ROUTES (area_id in URL path) ===
+
+// POST /editor/areas/:id/gallery
+func (h *AreaGalleryHandler) AddItemsToArea(c *fiber.Ctx) error {
+	areaID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid area_id")
+	}
+
+	var req models.AddAreaGalleryItemsRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.SendError(c, 400, "Invalid JSON")
+	}
+
+	// Override area_id from URL
+	req.AreaID = areaID
+
+	if err := h.service.AddGalleryItems(c.Context(), req); err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+	return utils.SendSuccess(c, "Items added to area gallery")
+}
+
+// PUT /editor/areas/:id/gallery/reorder
+func (h *AreaGalleryHandler) ReorderAreaGallery(c *fiber.Ctx) error {
+	areaID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid area_id")
+	}
+
+	var req models.ReorderAreaGalleryRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.SendError(c, 400, "Invalid JSON")
+	}
+
+	// Override area_id from URL
+	req.AreaID = areaID
+
+	if err := h.service.ReorderGallery(c.Context(), req); err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+	return utils.SendSuccess(c, "Area gallery reordered")
+}
+
+// PATCH /editor/areas/:id/gallery/:media_id
+func (h *AreaGalleryHandler) UpdateAreaGalleryItem(c *fiber.Ctx) error {
+	areaID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid area_id")
+	}
+
+	mediaID, err := uuid.Parse(c.Params("media_id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid media_id")
+	}
+
+	var req models.UpdateAreaGalleryItemRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.SendError(c, 400, "Invalid JSON")
+	}
+
+	// Override IDs from URL
+	req.AreaID = areaID
+	req.MediaAssetID = mediaID
+
+	if err := h.service.UpdateGalleryItem(c.Context(), req); err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+	return utils.SendSuccess(c, "Item updated")
+}
+
+// DELETE /editor/areas/:id/gallery/:media_id
+func (h *AreaGalleryHandler) RemoveAreaGalleryItem(c *fiber.Ctx) error {
+	areaID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid area_id")
+	}
+
+	mediaID, err := uuid.Parse(c.Params("media_id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid media_id")
+	}
+
+	if err := h.service.RemoveGalleryItem(c.Context(), areaID, mediaID); err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+	return utils.SendSuccess(c, "Item removed")
+}

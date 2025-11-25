@@ -29,7 +29,6 @@ func (c *RouteConfig) Setup() {
 	auth.Post("/invite/accept", c.AuthHandler.AcceptInvite)
 
 	api.Get("/venues/:orgSlug/:venueSlug/manifest", c.VenueHandler.GetManifest)
-	api.Get("/areas/:id", c.AreaHandler.GetDetail)
 
 	protected := api.Group("/", middleware.Protected())
 	protected.Get("/roles", c.TeamRoleHandler.ListSystemRoles)
@@ -55,14 +54,6 @@ func (c *RouteConfig) Setup() {
 	venues.Patch("/:id/gallery/:media_id", c.VenueGalleryHandler.UpdateItem)
 	venues.Delete("/:id/gallery/:media_id", c.VenueGalleryHandler.RemoveItem)
 
-	tenant.Get("/venues/:venue_id/areas", c.AreaHandler.GetVenueAreas)
-
-	aGallery := tenant.Group("/gallery/area")
-	aGallery.Post("/", c.AreaGalleryHandler.AddItems)
-	aGallery.Put("/reorder", c.AreaGalleryHandler.Reorder)
-	aGallery.Patch("/item", c.AreaGalleryHandler.UpdateItem)
-	aGallery.Delete("/:area_id/:media_id", c.AreaGalleryHandler.RemoveItem)
-
 	orgs := tenant.Group("/orgs/:org_id")
 	orgs.Get("/members", c.TeamRoleHandler.ListMembers)
 	orgs.Post("/invite", c.TeamRoleHandler.InviteMember)
@@ -83,6 +74,16 @@ func (c *RouteConfig) Setup() {
 
 	editor.Post("/floors/:floor_id/areas", c.AreaHandler.CreateArea)
 	editor.Put("/areas/:id/start-node", c.AreaHandler.SetStartNode)
+
+	// [TODO] ADD THESE MISSING ROUTES:
+	editor.Put("/areas/:id", c.AreaHandler.UpdateArea)
+	editor.Delete("/areas/:id", c.AreaHandler.DeleteArea)
+
+	// Area Gallery Management (Move from legacy)
+	editor.Post("/areas/:id/gallery", c.AreaGalleryHandler.AddItemsToArea)
+	editor.Put("/areas/:id/gallery/reorder", c.AreaGalleryHandler.ReorderAreaGallery)
+	editor.Patch("/areas/:id/gallery/:media_id", c.AreaGalleryHandler.UpdateAreaGalleryItem)
+	editor.Delete("/areas/:id/gallery/:media_id", c.AreaGalleryHandler.RemoveAreaGalleryItem)
 
 	editor.Post("/nodes", c.GraphHandler.CreateNode)
 	editor.Put("/nodes/:id/position", c.GraphHandler.UpdateNodePosition)

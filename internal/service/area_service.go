@@ -28,10 +28,11 @@ func IsPointInPolygon(p Point, polygon []Point) bool {
 }
 
 type areaService struct {
-	areaRepo    repository.AreaRepository
-	galleryRepo repository.AreaGalleryRepository
-	nodeRepo    repository.GraphRepository
-	floorRepo   repository.FloorRepository // Need to get revision from floor
+	areaRepo     repository.AreaRepository
+	galleryRepo  repository.AreaGalleryRepository
+	nodeRepo     repository.GraphRepository
+	floorRepo    repository.FloorRepository
+	revisionRepo repository.GraphRevisionRepository
 }
 
 func NewAreaService(
@@ -39,13 +40,36 @@ func NewAreaService(
 	gRepo repository.AreaGalleryRepository,
 	nRepo repository.GraphRepository,
 	fRepo repository.FloorRepository,
+	rRepo repository.GraphRevisionRepository,
 ) AreaService {
 	return &areaService{
-		areaRepo:    aRepo,
-		galleryRepo: gRepo,
-		nodeRepo:    nRepo,
-		floorRepo:   fRepo,
+		areaRepo:     aRepo,
+		galleryRepo:  gRepo,
+		nodeRepo:     nRepo,
+		floorRepo:    fRepo,
+		revisionRepo: rRepo,
 	}
+}
+
+func (s *areaService) validateAreaInDraft(areaID uuid.UUID) error {
+	area, err := s.areaRepo.GetByID(context.Background(), areaID)
+	if err != nil {
+		return err
+	}
+
+	// Get the floor to find the revision
+	floor, err := s.floorRepo.GetByID(context.Background(), area.FloorID)
+	if err != nil {
+		return err
+	}
+
+	// Check if the revision is draft
+	_, err = s.revisionRepo.GetDraftByFloorID(context.Background(), floor.ID)
+	if err != nil {
+		return errors.New("area is not in a draft revision")
+	}
+
+	return nil
 }
 
 func (s *areaService) CreateArea(ctx context.Context, req models.CreateAreaRequest) (*models.IDResponse, error) {
@@ -86,6 +110,11 @@ func (s *areaService) CreateArea(ctx context.Context, req models.CreateAreaReque
 }
 
 func (s *areaService) UpdateArea(ctx context.Context, id uuid.UUID, req models.CreateAreaRequest) error {
+	// Validate area is in draft revision
+	if err := s.validateAreaInDraft(id); err != nil {
+		return err
+	}
+
 	// 1. Get Existing
 	area, err := s.areaRepo.GetByID(ctx, id)
 	if err != nil {
@@ -114,6 +143,11 @@ func (s *areaService) UpdateArea(ctx context.Context, id uuid.UUID, req models.C
 }
 
 func (s *areaService) DeleteArea(ctx context.Context, id uuid.UUID) error {
+	// Validate area is in draft revision
+	if err := s.validateAreaInDraft(id); err != nil {
+		return err
+	}
+
 	return s.areaRepo.Delete(ctx, id)
 }
 
@@ -181,6 +215,11 @@ func (s *areaService) GetVenueAreas(ctx context.Context, venueID uuid.UUID) ([]m
 }
 
 func (s *areaService) SetAreaStartNode(ctx context.Context, areaID uuid.UUID, req models.SetStartNodeRequest) (*models.SetStartNodeResponse, error) {
+	// Validate area is in draft revision
+	if err := s.validateAreaInDraft(areaID); err != nil {
+		return nil, err
+	}
+
 	// 1. Get Area
 	area, err := s.areaRepo.GetAreaWithDetails(ctx, areaID)
 	if err != nil {

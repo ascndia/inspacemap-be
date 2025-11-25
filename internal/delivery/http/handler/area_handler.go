@@ -55,6 +55,35 @@ func (h *AreaHandler) SetStartNode(c *fiber.Ctx) error {
 	return utils.SendSuccess(c, resp)
 }
 
+func (h *AreaHandler) UpdateArea(c *fiber.Ctx) error {
+	areaID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid area_id")
+	}
+
+	var req models.CreateAreaRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.SendError(c, 400, "Invalid JSON")
+	}
+
+	if err := h.service.UpdateArea(c.Context(), areaID, req); err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+	return utils.SendSuccess(c, "Area updated")
+}
+
+func (h *AreaHandler) DeleteArea(c *fiber.Ctx) error {
+	areaID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid area_id")
+	}
+
+	if err := h.service.DeleteArea(c.Context(), areaID); err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+	return utils.SendSuccess(c, "Area deleted")
+}
+
 func (h *AreaHandler) GetDetail(c *fiber.Ctx) error {
 	id, _ := uuid.Parse(c.Params("id"))
 	resp, err := h.service.GetAreaDetail(c.Context(), id)

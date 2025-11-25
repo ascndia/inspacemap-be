@@ -85,14 +85,25 @@ func (s *venueGalleryService) RemoveGalleryItem(ctx context.Context, targetID, m
 }
 
 type areaGalleryService struct {
-	repo repository.AreaGalleryRepository
+	repo         repository.AreaGalleryRepository
+	areaRepo     repository.AreaRepository
+	revisionRepo repository.GraphRevisionRepository
 }
 
-func NewAreaGalleryService(repo repository.AreaGalleryRepository) AreaGalleryService {
-	return &areaGalleryService{repo: repo}
+func NewAreaGalleryService(repo repository.AreaGalleryRepository, areaRepo repository.AreaRepository, revisionRepo repository.GraphRevisionRepository) AreaGalleryService {
+	return &areaGalleryService{
+		repo:         repo,
+		areaRepo:     areaRepo,
+		revisionRepo: revisionRepo,
+	}
 }
 
 func (s *areaGalleryService) AddGalleryItems(ctx context.Context, req models.AddAreaGalleryItemsRequest) error {
+	// Validate that area belongs to a draft revision
+	if err := s.validateAreaInDraft(ctx, req.AreaID); err != nil {
+		return err
+	}
+
 	var items []entity.AreaGalleryItem
 	for _, item := range req.Items {
 		items = append(items, entity.AreaGalleryItem{
@@ -108,10 +119,20 @@ func (s *areaGalleryService) AddGalleryItems(ctx context.Context, req models.Add
 }
 
 func (s *areaGalleryService) ReorderGallery(ctx context.Context, req models.ReorderAreaGalleryRequest) error {
+	// Validate that area belongs to a draft revision
+	if err := s.validateAreaInDraft(ctx, req.AreaID); err != nil {
+		return err
+	}
+
 	return s.repo.ReorderAreaItems(ctx, req.AreaID, req.MediaAssetIDs)
 }
 
 func (s *areaGalleryService) UpdateGalleryItem(ctx context.Context, req models.UpdateAreaGalleryItemRequest) error {
+	// Validate that area belongs to a draft revision
+	if err := s.validateAreaInDraft(ctx, req.AreaID); err != nil {
+		return err
+	}
+
 	// Strategi Fetch-Merge-Update
 	existingItems, err := s.repo.GetByAreaID(ctx, req.AreaID)
 	if err != nil {
@@ -144,5 +165,26 @@ func (s *areaGalleryService) UpdateGalleryItem(ctx context.Context, req models.U
 }
 
 func (s *areaGalleryService) RemoveGalleryItem(ctx context.Context, targetID, mediaID uuid.UUID) error {
+	// Validate that area belongs to a draft revision
+	if err := s.validateAreaInDraft(ctx, targetID); err != nil {
+		return err
+	}
+
 	return s.repo.RemoveAreaItem(ctx, targetID, mediaID)
+}
+
+// Helper method to validate area belongs to draft revision
+func (s *areaGalleryService) validateAreaInDraft(ctx context.Context, areaID uuid.UUID) error {
+	area, err := s.areaRepo.GetByID(ctx, areaID)
+	if err != nil {
+		return errors.New("area not found")
+	}
+
+	// Check if the area's graph revision is draft
+	_, err = s.revisionRepo.GetDraftByFloorID(ctx, area.FloorID)
+	if err != nil {
+		return errors.New("area gallery can only be modified in draft revisions")
+	}
+
+	return nil
 }
