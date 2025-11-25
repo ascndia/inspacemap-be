@@ -275,7 +275,7 @@ func (s *areaService) ListAreas(ctx context.Context, query models.AreaQuery) ([]
 		return nil, 0, err
 	}
 
-	var items []models.AreaListItem
+	items := make([]models.AreaListItem, 0, len(areas)) // Pre-allocate with capacity
 	for _, area := range areas {
 		// Get floor name
 		floorName := ""
