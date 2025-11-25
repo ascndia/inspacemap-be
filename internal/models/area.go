@@ -1,6 +1,10 @@
 package models
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type GeoPoint struct {
 	Latitude  float64 `json:"latitude"`
@@ -44,6 +48,17 @@ type AreaPinDetail struct {
 	FloorName    string    `json:"floor_name,omitempty"`
 }
 
+type AreaListItem struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Category    string    `json:"category"`
+	FloorName   string    `json:"floor_name"`
+	CoverURL    string    `json:"cover_url"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type AreaDetail struct {
 	ID            uuid.UUID           `json:"id"`
 	Name          string              `json:"name"`
@@ -56,6 +71,7 @@ type AreaFilter struct {
 	OrganizationID *uuid.UUID `json:"organization_id,omitempty"`
 	VenueID        *uuid.UUID `json:"venue_id,omitempty"`
 	FloorID        *uuid.UUID `json:"floor_id,omitempty"`
+	RevisionID     *uuid.UUID `json:"revision_id,omitempty"`
 	Name           *string    `json:"name,omitempty"`
 	Slug           *string    `json:"slug,omitempty"`
 	Label          *string    `json:"label,omitempty"`

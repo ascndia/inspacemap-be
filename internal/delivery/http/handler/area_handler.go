@@ -4,17 +4,22 @@ import (
 	"inspacemap/backend/internal/models"
 	"inspacemap/backend/internal/service"
 	"inspacemap/backend/pkg/utils"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
 
 type AreaHandler struct {
-	service service.AreaService
+	service      service.AreaService
+	venueService service.VenueService
 }
 
-func NewAreaHandler(s service.AreaService) *AreaHandler {
-	return &AreaHandler{service: s}
+func NewAreaHandler(s service.AreaService, vs service.VenueService) *AreaHandler {
+	return &AreaHandler{
+		service:      s,
+		venueService: vs,
+	}
 }
 
 func (h *AreaHandler) CreateArea(c *fiber.Ctx) error {
@@ -100,4 +105,77 @@ func (h *AreaHandler) GetVenueAreas(c *fiber.Ctx) error {
 		return utils.SendError(c, 500, err.Error())
 	}
 	return utils.SendSuccess(c, resp)
+}
+
+func (h *AreaHandler) ListAreas(c *fiber.Ctx) error {
+	// Default values
+	defaultLimit := 20
+	defaultOffset := 0
+
+	query := models.AreaQuery{
+		Limit:  &defaultLimit,
+		Offset: &defaultOffset,
+	}
+
+	// Parse venue_id from URL (required for tenant filtering)
+	var venueID uuid.UUID
+	if venueIDStr := c.Params("venue_id"); venueIDStr != "" {
+		if vid, err := uuid.Parse(venueIDStr); err == nil {
+			venueID = vid
+			query.VenueID = &venueID
+		}
+	}
+
+	// Parse query parameters
+	if revisionIDStr := c.Query("revision_id"); revisionIDStr != "" {
+		if revisionID, err := uuid.Parse(revisionIDStr); err == nil {
+			query.RevisionID = &revisionID
+		}
+	} else {
+		// If no revision_id provided, default to the venue's live revision
+		if venueID != uuid.Nil {
+			venueDetail, err := h.venueService.GetVenueDetail(c.Context(), venueID)
+			if err == nil && venueDetail.LiveRevisionID != uuid.Nil {
+				query.RevisionID = &venueDetail.LiveRevisionID
+			}
+		}
+	}
+
+	if floorIDStr := c.Query("floor_id"); floorIDStr != "" {
+		if floorID, err := uuid.Parse(floorIDStr); err == nil {
+			query.FloorID = &floorID
+		}
+	}
+
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if limit, err := strconv.Atoi(limitStr); err == nil && limit > 0 && limit <= 100 {
+			query.Limit = &limit
+		}
+	}
+
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		if offset, err := strconv.Atoi(offsetStr); err == nil && offset >= 0 {
+			query.Offset = &offset
+		}
+	}
+
+	if name := c.Query("name"); name != "" {
+		query.Name = &name
+	}
+
+	if category := c.Query("category"); category != "" {
+		query.Category = &category
+	}
+
+	areas, total, err := h.service.ListAreas(c.Context(), query)
+	if err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+
+	return utils.SendSuccess(c, fiber.Map{
+		"areas":  areas,
+		"total":  total,
+		"limit":  *query.Limit,
+		"offset": *query.Offset,
+	})
 }

@@ -405,6 +405,7 @@ func (s *venueService) mapEntityToDetail(venue *entity.Venue) *models.VenueDetai
 		CoverImageURL:    coverURL,
 		Gallery:          galleryDTOs,
 		PointsOfInterest: poiDTOs,
+		LiveRevisionID:   venue.LiveRevisionID,
 		CreatedAt:        venue.CreatedAt,
 		UpdatedAt:        venue.UpdatedAt,
 	}

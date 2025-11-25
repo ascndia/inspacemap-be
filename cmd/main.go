@@ -107,7 +107,7 @@ func main() {
 	venueGalleryHandler := handler.NewVenueGalleryHandler(venueGalleryService) // Implementasi nanti
 	graphHandler := handler.NewGraphHandler(graphService)
 	mediaHandler := handler.NewMediaHandler(mediaService)
-	areaHandler := handler.NewAreaHandler(areaService)
+	areaHandler := handler.NewAreaHandler(areaService, venueService)
 	areaGalleryHandler := handler.NewAreaGalleryHandler(areaGalleryService) // Implementasi nanti
 	auditHandler := handler.NewAuditHandler(auditService)                   // Implementasi nanti
 	// 6. SETUP FIBER APP

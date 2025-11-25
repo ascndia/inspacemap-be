@@ -59,6 +59,7 @@ type VenueDetail struct {
 	CoverImageURL    string               `json:"cover_image_url,omitempty"`
 	Gallery          []VenueGalleryDetail `json:"gallery"`
 	PointsOfInterest []AreaPinDetail      `json:"pois"`
+	LiveRevisionID   uuid.UUID            `json:"live_revision_id"`
 	CreatedAt        time.Time            `json:"created_at"`
 	UpdatedAt        time.Time            `json:"updated_at"`
 }

@@ -54,6 +54,9 @@ func (c *RouteConfig) Setup() {
 	venues.Patch("/:id/gallery/:media_id", c.VenueGalleryHandler.UpdateItem)
 	venues.Delete("/:id/gallery/:media_id", c.VenueGalleryHandler.RemoveItem)
 
+	// Area Management for Tenant Portal
+	venues.Get("/:venue_id/areas", c.AreaHandler.ListAreas)
+
 	orgs := tenant.Group("/orgs/:org_id")
 	orgs.Get("/members", c.TeamRoleHandler.ListMembers)
 	orgs.Post("/invite", c.TeamRoleHandler.InviteMember)

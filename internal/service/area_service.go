@@ -273,3 +273,44 @@ func (s *areaService) SetAreaStartNode(ctx context.Context, areaID uuid.UUID, re
 
 	return response, nil
 }
+
+func (s *areaService) ListAreas(ctx context.Context, query models.AreaQuery) ([]models.AreaListItem, int64, error) {
+	// Get areas with filtering and pagination
+	areas, total, err := s.areaRepo.PagedAreas(ctx, query)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var items []models.AreaListItem
+	for _, area := range areas {
+		// Get floor name
+		floorName := ""
+		if area.FloorID != uuid.Nil {
+			if floor, err := s.floorRepo.GetByID(ctx, area.FloorID); err == nil {
+				floorName = floor.Name
+			}
+		}
+
+		// Get cover image URL
+		coverURL := ""
+		if area.CoverImage != nil {
+			coverURL = area.CoverImage.ThumbnailURL
+			if coverURL == "" {
+				coverURL = area.CoverImage.PublicURL
+			}
+		}
+
+		items = append(items, models.AreaListItem{
+			ID:          area.ID,
+			Name:        area.Name,
+			Description: area.Description,
+			Category:    area.Category,
+			FloorName:   floorName,
+			CoverURL:    coverURL,
+			CreatedAt:   area.CreatedAt,
+			UpdatedAt:   area.UpdatedAt,
+		})
+	}
+
+	return items, total, nil
+}

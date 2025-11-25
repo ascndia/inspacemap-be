@@ -158,6 +158,11 @@ func (r *areaRepo) buildFilterQuery(ctx context.Context, f models.AreaFilter) *g
 		db = db.Where("floor_id = ?", *f.FloorID)
 	}
 
+	if f.RevisionID != nil {
+		db = db.Joins("JOIN floors ON floors.id = areas.floor_id").
+			Where("floors.graph_revision_id = ?", *f.RevisionID)
+	}
+
 	if f.Name != nil {
 		db = db.Where("name ILIKE ?", "%"+*f.Name+"%")
 	}
