@@ -98,6 +98,7 @@ func (s *areaService) CreateArea(ctx context.Context, req models.CreateAreaReque
 		Boundary:        boundary,
 		GraphRevisionID: floor.GraphRevisionID,
 		FloorID:         *req.FloorID,
+		VenueID:         floor.VenueID, // Set venue ID from floor
 		CoverImageID:    req.CoverImageID,
 	}
 
