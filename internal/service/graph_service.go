@@ -407,6 +407,54 @@ func (s *graphService) GetEditorDataByRevision(ctx context.Context, revisionID u
 			})
 		}
 
+		// Load areas for this floor
+		areas, err := s.areaRepo.GetByFloorID(ctx, floor.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		var areaDTOs []models.AreaData
+		for _, area := range areas {
+			// Build gallery for this area
+			var galleryDTOs []models.AreaGalleryDetail
+			for _, item := range area.Gallery {
+				galleryDTOs = append(galleryDTOs, models.AreaGalleryDetail{
+					MediaID:      item.MediaAssetID,
+					URL:          item.MediaAsset.PublicURL,
+					ThumbnailURL: item.MediaAsset.ThumbnailURL,
+					Caption:      item.Caption,
+					SortOrder:    item.SortOrder,
+				})
+			}
+
+			coverURL := ""
+			if area.CoverImage != nil {
+				coverURL = area.CoverImage.ThumbnailURL
+				if coverURL == "" {
+					coverURL = area.CoverImage.PublicURL
+				}
+			}
+
+			// Convert boundary from entity.Boundary to []BoundaryPoint
+			boundary := make([]models.BoundaryPoint, len(area.Boundary))
+			for i, bp := range area.Boundary {
+				boundary[i] = models.BoundaryPoint{X: bp.X, Y: bp.Y}
+			}
+
+			areaDTOs = append(areaDTOs, models.AreaData{
+				ID:            area.ID,
+				Name:          area.Name,
+				Description:   area.Description,
+				Category:      area.Category,
+				Latitude:      area.Latitude,
+				Longitude:     area.Longitude,
+				Boundary:      boundary,
+				StartNodeID:   area.StartNodeID,
+				CoverImageURL: coverURL,
+				Gallery:       galleryDTOs,
+			})
+		}
+
 		mapURL := ""
 		if floor.MapImage != nil {
 			mapURL = floor.MapImage.PublicURL
@@ -420,6 +468,7 @@ func (s *graphService) GetEditorDataByRevision(ctx context.Context, revisionID u
 			MapWidth:    floor.MapWidth,
 			MapHeight:   floor.MapHeight,
 			Nodes:       nodeDTOs,
+			Areas:       areaDTOs,
 		})
 	}
 

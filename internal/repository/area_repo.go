@@ -34,6 +34,9 @@ func (r *areaRepo) GetByFloorID(ctx context.Context, floorID uuid.UUID) ([]entit
 	var areas []entity.Area
 	err := r.db.WithContext(ctx).
 		Preload("CoverImage").
+		Preload("Gallery", func(db *gorm.DB) *gorm.DB {
+			return db.Preload("MediaAsset").Order("sort_order ASC")
+		}).
 		Where("floor_id = ?", floorID).
 		Find(&areas).Error
 	return areas, err
