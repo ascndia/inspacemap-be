@@ -299,7 +299,12 @@ func (r *revisionRepo) PublishDraft(ctx context.Context, revisionID uuid.UUID, n
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 1. Ambil Draft
 		var draft entity.GraphRevision
-		if err := tx.Preload("Floors.Nodes.OutgoingEdges").First(&draft, "id = ?", revisionID).Error; err != nil {
+		if err := tx.Preload("Floors").
+			Preload("Floors.MapImage").
+			Preload("Floors.Nodes", func(db *gorm.DB) *gorm.DB { return db.Preload("Panorama") }).
+			Preload("Floors.Nodes.OutgoingEdges", func(db *gorm.DB) *gorm.DB { return db.Where("is_active = ?", true) }).
+			Preload("Floors.Areas", func(db *gorm.DB) *gorm.DB { return db.Preload("Gallery").Preload("CoverImage") }).
+			First(&draft, "id = ?", revisionID).Error; err != nil {
 			return err
 		}
 
@@ -340,7 +345,47 @@ func (r *revisionRepo) PublishDraft(ctx context.Context, revisionID uuid.UUID, n
 				return err
 			}
 
-			// Clone Nodes
+			// Clone Areas first and keep mapping
+			areaIDMap := make(map[uuid.UUID]uuid.UUID)
+			for _, area := range floor.Areas {
+				newArea := entity.Area{
+					GraphRevisionID: newLiveRev.ID,
+					FloorID:         newFloor.ID,
+					VenueID:         draft.VenueID,
+					Name:            area.Name,
+					Slug:            area.Slug,
+					Label:           area.Label,
+					Description:     area.Description,
+					Latitude:        area.Latitude,
+					Longitude:       area.Longitude,
+					Boundary:        area.Boundary,
+					LabelX:          area.LabelX,
+					LabelY:          area.LabelY,
+					Category:        area.Category,
+					CoverImageID:    area.CoverImageID,
+				}
+				if err := tx.Create(&newArea).Error; err != nil {
+					return err
+				}
+
+				areaIDMap[area.ID] = newArea.ID
+
+				// Clone area gallery items
+				for _, g := range area.Gallery {
+					newG := entity.AreaGalleryItem{
+						AreaID:       newArea.ID,
+						MediaAssetID: g.MediaAssetID,
+						SortOrder:    g.SortOrder,
+						Caption:      g.Caption,
+						IsVisible:    g.IsVisible,
+					}
+					if err := tx.Create(&newG).Error; err != nil {
+						return err
+					}
+				}
+			}
+
+			// Clone Nodes (map AreaIDs to new ones)
 			for _, node := range floor.Nodes {
 				newNode := entity.GraphNode{
 					FloorID:         newFloor.ID,
@@ -353,6 +398,16 @@ func (r *revisionRepo) PublishDraft(ctx context.Context, revisionID uuid.UUID, n
 					Properties:      node.Properties,
 					IsActive:        node.IsActive,
 				}
+				// Remap AreaID if needed
+				if node.AreaID != nil {
+					if mapped, ok := areaIDMap[*node.AreaID]; ok {
+						newNode.AreaID = &mapped
+					} else {
+						// area not present in this floor in draft (should be nil)
+						newNode.AreaID = nil
+					}
+				}
+
 				if err := tx.Create(&newNode).Error; err != nil {
 					return err
 				}
