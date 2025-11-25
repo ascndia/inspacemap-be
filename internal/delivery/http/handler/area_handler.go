@@ -61,7 +61,7 @@ func (h *AreaHandler) UpdateArea(c *fiber.Ctx) error {
 		return utils.SendError(c, 400, "Invalid area_id")
 	}
 
-	var req models.CreateAreaRequest
+	var req models.UpdateAreaRequest
 	if err := c.BodyParser(&req); err != nil {
 		return utils.SendError(c, 400, "Invalid JSON")
 	}

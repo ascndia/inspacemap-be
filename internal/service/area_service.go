@@ -109,7 +109,7 @@ func (s *areaService) CreateArea(ctx context.Context, req models.CreateAreaReque
 	return &models.IDResponse{ID: area.ID}, nil
 }
 
-func (s *areaService) UpdateArea(ctx context.Context, id uuid.UUID, req models.CreateAreaRequest) error {
+func (s *areaService) UpdateArea(ctx context.Context, id uuid.UUID, req models.UpdateAreaRequest) error {
 	// Validate area is in draft revision
 	if err := s.validateAreaInDraft(id); err != nil {
 		return err
@@ -121,22 +121,35 @@ func (s *areaService) UpdateArea(ctx context.Context, id uuid.UUID, req models.C
 		return errors.New("area not found")
 	}
 
-	// 2. Parse Boundary
-	boundary := make(entity.Boundary, len(req.Boundary))
-	for i, p := range req.Boundary {
-		boundary[i] = entity.BoundaryPoint{X: p.X, Y: p.Y}
+	// 2. Partial Update Logic - only update fields that are provided
+	if req.Name != nil {
+		area.Name = *req.Name
 	}
-
-	// 3. Update Fields
-	area.Name = req.Name
-	area.Description = req.Description
-	area.Category = req.Category
-	area.Latitude = req.Latitude
-	area.Longitude = req.Longitude
-	area.Boundary = boundary
-	area.CoverImageID = req.CoverImageID
+	if req.Description != nil {
+		area.Description = *req.Description
+	}
+	if req.Category != nil {
+		area.Category = *req.Category
+	}
+	if req.Latitude != nil {
+		area.Latitude = *req.Latitude
+	}
+	if req.Longitude != nil {
+		area.Longitude = *req.Longitude
+	}
+	if req.Boundary != nil {
+		// Parse Boundary points from DTO to Entity
+		boundary := make(entity.Boundary, len(req.Boundary))
+		for i, p := range req.Boundary {
+			boundary[i] = entity.BoundaryPoint{X: p.X, Y: p.Y}
+		}
+		area.Boundary = boundary
+	}
 	if req.FloorID != nil {
 		area.FloorID = *req.FloorID
+	}
+	if req.CoverImageID != nil {
+		area.CoverImageID = req.CoverImageID
 	}
 
 	return s.areaRepo.Update(ctx, area)

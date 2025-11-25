@@ -74,7 +74,7 @@ type MediaService interface {
 
 type AreaService interface {
 	CreateArea(ctx context.Context, req models.CreateAreaRequest) (*models.IDResponse, error)
-	UpdateArea(ctx context.Context, id uuid.UUID, req models.CreateAreaRequest) error // Re-use create request for update fields
+	UpdateArea(ctx context.Context, id uuid.UUID, req models.UpdateAreaRequest) error
 	DeleteArea(ctx context.Context, id uuid.UUID) error
 	GetAreaDetail(ctx context.Context, id uuid.UUID) (*models.AreaDetail, error)
 	GetVenueAreas(ctx context.Context, venueID uuid.UUID) ([]models.AreaPinDetail, error)

@@ -24,6 +24,17 @@ type CreateAreaRequest struct {
 	Gallery      []AreaItemRequest `json:"gallery"`
 }
 
+type UpdateAreaRequest struct {
+	Name         *string         `json:"name,omitempty"`
+	Description  *string         `json:"description,omitempty"`
+	Category     *string         `json:"category,omitempty"`
+	Latitude     *float64        `json:"latitude,omitempty"`
+	Longitude    *float64        `json:"longitude,omitempty"`
+	Boundary     []BoundaryPoint `json:"boundary,omitempty"`
+	FloorID      *uuid.UUID      `json:"floor_id,omitempty"`
+	CoverImageID *uuid.UUID      `json:"cover_image_id,omitempty"`
+}
+
 type AreaPinDetail struct {
 	ID           uuid.UUID `json:"id"`
 	Name         string    `json:"name"`
