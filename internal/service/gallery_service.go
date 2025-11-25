@@ -173,6 +173,28 @@ func (s *areaGalleryService) RemoveGalleryItem(ctx context.Context, targetID, me
 	return s.repo.RemoveAreaItem(ctx, targetID, mediaID)
 }
 
+func (s *areaGalleryService) GetGalleryItems(ctx context.Context, areaID uuid.UUID) ([]models.AreaGalleryDetail, error) {
+	items, err := s.repo.GetByAreaID(ctx, areaID)
+	if err != nil {
+		return nil, err
+	}
+
+	var details []models.AreaGalleryDetail
+	for _, item := range items {
+		detail := models.AreaGalleryDetail{
+			MediaID:      item.MediaAssetID,
+			URL:          item.MediaAsset.PublicURL,
+			ThumbnailURL: item.MediaAsset.ThumbnailURL,
+			Caption:      item.Caption,
+			SortOrder:    item.SortOrder,
+			IsFeatured:   false, // Area galleries don't have featured items
+		}
+		details = append(details, detail)
+	}
+
+	return details, nil
+}
+
 // Helper method to validate area belongs to draft revision
 func (s *areaGalleryService) validateAreaInDraft(ctx context.Context, areaID uuid.UUID) error {
 	area, err := s.areaRepo.GetByID(ctx, areaID)

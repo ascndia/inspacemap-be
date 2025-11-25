@@ -196,6 +196,73 @@ func (s *areaService) GetAreaDetail(ctx context.Context, id uuid.UUID) (*models.
 	}, nil
 }
 
+// GetAreaEditorDetail: Dipanggil oleh Editor untuk mendapatkan detail lengkap area
+func (s *areaService) GetAreaEditorDetail(ctx context.Context, id uuid.UUID) (*models.AreaEditorDetail, error) {
+	// 1. Ambil Info Dasar dengan preload
+	area, err := s.areaRepo.GetAreaWithDetails(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Ambil Gallery
+	galleryItems, _ := s.galleryRepo.GetByAreaID(ctx, id)
+	var galleryDTOs []models.AreaGalleryDetail
+	for _, item := range galleryItems {
+		galleryDTOs = append(galleryDTOs, models.AreaGalleryDetail{
+			MediaID:      item.MediaAssetID,
+			URL:          item.MediaAsset.PublicURL,
+			ThumbnailURL: item.MediaAsset.ThumbnailURL,
+			Caption:      item.Caption,
+			SortOrder:    item.SortOrder,
+		})
+	}
+
+	// 4. Convert boundary to model type
+	var boundaryDTOs []models.BoundaryPoint
+	for _, bp := range area.Boundary {
+		boundaryDTOs = append(boundaryDTOs, models.BoundaryPoint{
+			X: bp.X,
+			Y: bp.Y,
+		})
+	}
+
+	// 5. Get floor name
+	floorName := ""
+	if area.FloorID != uuid.Nil {
+		if floor, err := s.floorRepo.GetByID(ctx, area.FloorID); err == nil {
+			floorName = floor.Name
+		}
+	}
+
+	// 6. Get cover image URL
+	coverURL := ""
+	if area.CoverImage != nil {
+		coverURL = area.CoverImage.ThumbnailURL
+		if coverURL == "" {
+			coverURL = area.CoverImage.PublicURL
+		}
+	}
+
+	return &models.AreaEditorDetail{
+		ID:           area.ID,
+		Name:         area.Name,
+		Description:  area.Description,
+		Category:     area.Category,
+		Latitude:     area.Latitude,
+		Longitude:    area.Longitude,
+		Boundary:     boundaryDTOs,
+		StartNodeID:  area.StartNodeID,
+		FloorID:      area.FloorID,
+		FloorName:    floorName,
+		RevisionID:   area.GraphRevisionID,
+		CoverImageID: area.CoverImageID,
+		CoverURL:     coverURL,
+		Gallery:      galleryDTOs,
+		CreatedAt:    area.CreatedAt,
+		UpdatedAt:    area.UpdatedAt,
+	}, nil
+}
+
 // GetVenueAreas: List Pin untuk Peta Google Maps
 func (s *areaService) GetVenueAreas(ctx context.Context, venueID uuid.UUID) ([]models.AreaPinDetail, error) {
 	areas, err := s.areaRepo.GetByVenueID(ctx, venueID)

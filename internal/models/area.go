@@ -70,6 +70,25 @@ type AreaDetail struct {
 	StartNodeID *uuid.UUID          `json:"start_node_id"`
 }
 
+type AreaEditorDetail struct {
+	ID           uuid.UUID           `json:"id"`
+	Name         string              `json:"name"`
+	Description  string              `json:"description"`
+	Category     string              `json:"category"`
+	Latitude     float64             `json:"latitude"`
+	Longitude    float64             `json:"longitude"`
+	Boundary     []BoundaryPoint     `json:"boundary"`
+	StartNodeID  *uuid.UUID          `json:"start_node_id"`
+	FloorID      uuid.UUID           `json:"floor_id"`
+	FloorName    string              `json:"floor_name"`
+	RevisionID   uuid.UUID           `json:"revision_id"`
+	CoverImageID *uuid.UUID          `json:"cover_image_id"`
+	CoverURL     string              `json:"cover_url"`
+	Gallery      []AreaGalleryDetail `json:"gallery"`
+	CreatedAt    time.Time           `json:"created_at"`
+	UpdatedAt    time.Time           `json:"updated_at"`
+}
+
 type AreaFilter struct {
 	OrganizationID *uuid.UUID `json:"organization_id,omitempty"`
 	VenueID        *uuid.UUID `json:"venue_id,omitempty"`

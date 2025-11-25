@@ -78,6 +78,7 @@ type AreaService interface {
 	DeleteArea(ctx context.Context, id uuid.UUID) error
 	ListAreas(ctx context.Context, query models.AreaQuery) ([]models.AreaListItem, int64, error)
 	GetAreaDetail(ctx context.Context, id uuid.UUID) (*models.AreaDetail, error)
+	GetAreaEditorDetail(ctx context.Context, id uuid.UUID) (*models.AreaEditorDetail, error)
 	GetVenueAreas(ctx context.Context, venueID uuid.UUID) ([]models.AreaPinDetail, error)
 	SetAreaStartNode(ctx context.Context, areaID uuid.UUID, req models.SetStartNodeRequest) (*models.SetStartNodeResponse, error)
 }
@@ -103,6 +104,7 @@ type AreaGalleryService interface {
 	AddGalleryItems(ctx context.Context, req models.AddAreaGalleryItemsRequest) error
 	UpdateGalleryItem(ctx context.Context, req models.UpdateAreaGalleryItemRequest) error
 	RemoveGalleryItem(ctx context.Context, targetID, mediaID uuid.UUID) error
+	GetGalleryItems(ctx context.Context, areaID uuid.UUID) ([]models.AreaGalleryDetail, error)
 }
 
 type AuditService interface {

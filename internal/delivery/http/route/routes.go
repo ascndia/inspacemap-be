@@ -76,6 +76,7 @@ func (c *RouteConfig) Setup() {
 	editor.Delete("/floors/:id", c.GraphHandler.DeleteFloor)
 
 	editor.Post("/floors/:floor_id/areas", c.AreaHandler.CreateArea)
+	editor.Get("/areas/:id", c.AreaHandler.GetEditorDetail)
 	editor.Put("/areas/:id/start-node", c.AreaHandler.SetStartNode)
 
 	// [TODO] ADD THESE MISSING ROUTES:
@@ -84,6 +85,7 @@ func (c *RouteConfig) Setup() {
 
 	// Area Gallery Management (Move from legacy)
 	editor.Post("/areas/:id/gallery", c.AreaGalleryHandler.AddItemsToArea)
+	editor.Get("/areas/:id/gallery", c.AreaHandler.GetAreaGallery)
 	editor.Put("/areas/:id/gallery/reorder", c.AreaGalleryHandler.ReorderAreaGallery)
 	editor.Patch("/areas/:id/gallery/:media_id", c.AreaGalleryHandler.UpdateAreaGalleryItem)
 	editor.Delete("/areas/:id/gallery/:media_id", c.AreaGalleryHandler.RemoveAreaGalleryItem)

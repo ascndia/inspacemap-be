@@ -11,14 +11,16 @@ import (
 )
 
 type AreaHandler struct {
-	service      service.AreaService
-	venueService service.VenueService
+	service        service.AreaService
+	venueService   service.VenueService
+	galleryService service.AreaGalleryService
 }
 
-func NewAreaHandler(s service.AreaService, vs service.VenueService) *AreaHandler {
+func NewAreaHandler(s service.AreaService, vs service.VenueService, gs service.AreaGalleryService) *AreaHandler {
 	return &AreaHandler{
-		service:      s,
-		venueService: vs,
+		service:        s,
+		venueService:   vs,
+		galleryService: gs,
 	}
 }
 
@@ -92,6 +94,15 @@ func (h *AreaHandler) DeleteArea(c *fiber.Ctx) error {
 func (h *AreaHandler) GetDetail(c *fiber.Ctx) error {
 	id, _ := uuid.Parse(c.Params("id"))
 	resp, err := h.service.GetAreaDetail(c.Context(), id)
+	if err != nil {
+		return utils.SendError(c, 404, "Area not found")
+	}
+	return utils.SendSuccess(c, resp)
+}
+
+func (h *AreaHandler) GetEditorDetail(c *fiber.Ctx) error {
+	id, _ := uuid.Parse(c.Params("id"))
+	resp, err := h.service.GetAreaEditorDetail(c.Context(), id)
 	if err != nil {
 		return utils.SendError(c, 404, "Area not found")
 	}
@@ -184,4 +195,18 @@ func (h *AreaHandler) ListAreas(c *fiber.Ctx) error {
 		"limit":  *query.Limit,
 		"offset": *query.Offset,
 	})
+}
+
+func (h *AreaHandler) GetAreaGallery(c *fiber.Ctx) error {
+	areaID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.SendError(c, 400, "Invalid area_id")
+	}
+
+	galleryItems, err := h.galleryService.GetGalleryItems(c.Context(), areaID)
+	if err != nil {
+		return utils.SendError(c, 500, err.Error())
+	}
+
+	return utils.SendSuccess(c, galleryItems)
 }
