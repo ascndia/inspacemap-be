@@ -49,22 +49,25 @@ type AreaPinDetail struct {
 }
 
 type AreaListItem struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Category    string    `json:"category"`
-	FloorName   string    `json:"floor_name"`
-	CoverURL    string    `json:"cover_url"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID           uuid.UUID `json:"id"`
+	Name         string    `json:"name"`
+	Description  string    `json:"description"`
+	Category     string    `json:"category"`
+	FloorID      uuid.UUID `json:"floor_id"`
+	FloorName    string    `json:"floor_name"`
+	RevisionID   uuid.UUID `json:"revision_id"`
+	CoverURL     string    `json:"cover_url"`
+	GalleryCount int       `json:"gallery_count"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type AreaDetail struct {
-	ID            uuid.UUID           `json:"id"`
-	Name          string              `json:"name"`
-	Description   string              `json:"description"`
-	Gallery       []AreaGalleryDetail `json:"gallery"`
-	NearestNodeID *uuid.UUID          `json:"nearest_node_id"`
+	ID          uuid.UUID           `json:"id"`
+	Name        string              `json:"name"`
+	Description string              `json:"description"`
+	Gallery     []AreaGalleryDetail `json:"gallery"`
+	StartNodeID *uuid.UUID          `json:"start_node_id"`
 }
 
 type AreaFilter struct {

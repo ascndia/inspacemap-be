@@ -143,7 +143,7 @@ func (r *areaRepo) CursorAreas(ctx context.Context, q models.AreaQueryCursor) ([
 }
 
 func (r *areaRepo) buildFilterQuery(ctx context.Context, f models.AreaFilter) *gorm.DB {
-	db := r.db.WithContext(ctx).Preload("CoverImage")
+	db := r.db.WithContext(ctx).Preload("CoverImage").Preload("Gallery")
 
 	if f.OrganizationID != nil {
 		db = db.Joins("JOIN venues ON venues.id = areas.venue_id").

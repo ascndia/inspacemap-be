@@ -185,19 +185,13 @@ func (s *areaService) GetAreaDetail(ctx context.Context, id uuid.UUID) (*models.
 		})
 	}
 
-	// 3. Cari Node Terdekat (Start Point untuk 360)
-	// Logic: Cari node yang punya AreaID == id ini. Ambil yang pertama.
-	// (Perlu implementasi query di GraphRepo: GetOneNodeByAreaID)
-	var nearestNodeID *uuid.UUID
-	// node, _ := s.nodeRepo.GetOneByAreaID(ctx, id)
-	// if node != nil { nearestNodeID = &node.ID }
-
+	// 3. Get Start Node ID (for 360° navigation starting point)
 	return &models.AreaDetail{
-		ID:            area.ID,
-		Name:          area.Name,
-		Description:   area.Description,
-		Gallery:       galleryDTOs,
-		NearestNodeID: nearestNodeID,
+		ID:          area.ID,
+		Name:        area.Name,
+		Description: area.Description,
+		Gallery:     galleryDTOs,
+		StartNodeID: area.StartNodeID,
 	}, nil
 }
 
@@ -301,14 +295,17 @@ func (s *areaService) ListAreas(ctx context.Context, query models.AreaQuery) ([]
 		}
 
 		items = append(items, models.AreaListItem{
-			ID:          area.ID,
-			Name:        area.Name,
-			Description: area.Description,
-			Category:    area.Category,
-			FloorName:   floorName,
-			CoverURL:    coverURL,
-			CreatedAt:   area.CreatedAt,
-			UpdatedAt:   area.UpdatedAt,
+			ID:           area.ID,
+			Name:         area.Name,
+			Description:  area.Description,
+			Category:     area.Category,
+			FloorID:      area.FloorID,
+			FloorName:    floorName,
+			RevisionID:   area.GraphRevisionID,
+			CoverURL:     coverURL,
+			GalleryCount: len(area.Gallery),
+			CreatedAt:    area.CreatedAt,
+			UpdatedAt:    area.UpdatedAt,
 		})
 	}
 
