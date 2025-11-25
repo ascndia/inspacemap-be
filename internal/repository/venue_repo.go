@@ -192,6 +192,11 @@ func (r *venueRepo) GetLiveManifestData(ctx context.Context, orgSlug, venueSlug 
 		Preload("LiveRevision.Floors.Nodes.OutgoingEdges", func(db *gorm.DB) *gorm.DB {
 			return db.Where("is_active = ?", true)
 		}).
+		Preload("LiveRevision.Floors.Areas").
+		Preload("LiveRevision.Floors.Areas.CoverImage").
+		Preload("LiveRevision.Floors.Areas.Gallery", func(db *gorm.DB) *gorm.DB {
+			return db.Preload("MediaAsset").Where("is_visible = ?", true).Order("sort_order ASC")
+		}).
 		Preload("CoverImage").
 		Preload("Gallery.MediaAsset").
 		Where("venues.slug = ? AND organizations.slug = ?", venueSlug, orgSlug).

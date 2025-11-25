@@ -244,6 +244,49 @@ func (s *venueService) GetMobileManifest(ctx context.Context, orgSlug, venueSlug
 			})
 		}
 
+		// Build areas for this floor
+		var areaDTOs []models.AreaData
+		for _, area := range floor.Areas {
+			// Build gallery for this area
+			var galleryDTOs []models.AreaGalleryDetail
+			for _, item := range area.Gallery {
+				galleryDTOs = append(galleryDTOs, models.AreaGalleryDetail{
+					MediaID:      item.MediaAssetID,
+					URL:          item.MediaAsset.PublicURL,
+					ThumbnailURL: item.MediaAsset.ThumbnailURL,
+					Caption:      item.Caption,
+					SortOrder:    item.SortOrder,
+				})
+			}
+
+			coverURL := ""
+			if area.CoverImage != nil {
+				coverURL = area.CoverImage.ThumbnailURL
+				if coverURL == "" {
+					coverURL = area.CoverImage.PublicURL
+				}
+			}
+
+			// Convert boundary from entity.Boundary to []BoundaryPoint
+			boundary := make([]models.BoundaryPoint, len(area.Boundary))
+			for i, bp := range area.Boundary {
+				boundary[i] = models.BoundaryPoint{X: bp.X, Y: bp.Y}
+			}
+
+			areaDTOs = append(areaDTOs, models.AreaData{
+				ID:            area.ID,
+				Name:          area.Name,
+				Description:   area.Description,
+				Category:      area.Category,
+				Latitude:      area.Latitude,
+				Longitude:     area.Longitude,
+				Boundary:      boundary,
+				StartNodeID:   area.StartNodeID,
+				CoverImageURL: coverURL,
+				Gallery:       galleryDTOs,
+			})
+		}
+
 		mapURL := ""
 		if floor.MapImage != nil {
 			mapURL = floor.MapImage.PublicURL
@@ -257,6 +300,7 @@ func (s *venueService) GetMobileManifest(ctx context.Context, orgSlug, venueSlug
 			MapWidth:    floor.MapWidth,
 			MapHeight:   floor.MapHeight,
 			Nodes:       nodeDTOs,
+			Areas:       areaDTOs,
 		})
 	}
 

@@ -22,6 +22,7 @@ type FloorData struct {
 	MapWidth    int        `json:"width"`
 	MapHeight   int        `json:"height"`
 	Nodes       []NodeData `json:"nodes"`
+	Areas       []AreaData `json:"areas"`
 }
 
 type NodeData struct {
@@ -42,4 +43,17 @@ type NeighborData struct {
 	Distance     float64   `json:"distance"`  // Jarak dalam pixel/meter
 	Type         string    `json:"type"`      // 'walk', 'stairs' (Untuk icon panah beda)
 	IsActive     bool      `json:"is_active"` // Jika false, jangan gambar panah
+}
+
+type AreaData struct {
+	ID            uuid.UUID           `json:"id"`
+	Name          string              `json:"name"`
+	Description   string              `json:"description"`
+	Category      string              `json:"category"`
+	Latitude      float64             `json:"latitude"`
+	Longitude     float64             `json:"longitude"`
+	Boundary      []BoundaryPoint     `json:"boundary"`
+	StartNodeID   *uuid.UUID          `json:"start_node_id,omitempty"`
+	CoverImageURL string              `json:"cover_image_url,omitempty"`
+	Gallery       []AreaGalleryDetail `json:"gallery"`
 }
