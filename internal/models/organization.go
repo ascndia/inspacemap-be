@@ -37,7 +37,8 @@ type OrganizationDetail struct {
 	ID         uuid.UUID              `json:"id"`
 	Name       string                 `json:"name"`
 	Slug       string                 `json:"slug"`
-	LogoURL    string                 `json:"logo_url"`
+	LogoID     *uuid.UUID             `json:"logo_id"`
+	LogoURL    string                 `json:"logo_url,omitempty"`
 	Website    string                 `json:"website"`
 	IsActive   bool                   `json:"is_active"`
 	Settings   map[string]interface{} `json:"settings"`
@@ -49,7 +50,7 @@ type OrganizationDetail struct {
 type CreateOrganizationRequest struct {
 	Name     string                 `json:"name" validate:"required,min=3"`
 	Slug     string                 `json:"slug" validate:"required,alphanum,min=3"`
-	LogoURL  string                 `json:"logo_url" validate:"omitempty,url"`
+	LogoID   *uuid.UUID             `json:"logo_id"`
 	Website  string                 `json:"website" validate:"omitempty,url"`
 	Settings map[string]interface{} `json:"settings"`
 }
@@ -57,7 +58,7 @@ type CreateOrganizationRequest struct {
 type UpdateOrganizationRequest struct {
 	Name     *string                `json:"name" validate:"omitempty,min=3"`
 	Slug     *string                `json:"slug" validate:"omitempty,alphanum,min=3"`
-	LogoURL  *string                `json:"logo_url" validate:"omitempty,url"`
+	LogoID   *uuid.UUID             `json:"logo_id"`
 	Website  *string                `json:"website" validate:"omitempty,url"`
 	Settings map[string]interface{} `json:"settings"`
 }

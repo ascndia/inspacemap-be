@@ -26,9 +26,10 @@ func (r *organizationRepo) GetByDomain(ctx context.Context, domain string) (*ent
 	var org entity.Organization
 	// Cek apakah domain cocok dengan Slug ATAU Website
 	err := r.db.WithContext(ctx).
+		Preload("Logo").
 		Where("slug = ? OR website = ?", domain, domain).
 		First(&org).Error
-	
+
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +69,7 @@ func (r *organizationRepo) PagedOrganizations(ctx context.Context, q models.Orga
 		offset = *q.Offset
 	}
 
-	err := db.Limit(limit).Offset(offset).Find(&orgs).Error
+	err := db.Limit(limit).Offset(offset).Preload("Logo").Find(&orgs).Error
 	return orgs, total, err
 }
 
@@ -94,6 +95,7 @@ func (r *organizationRepo) CursorOrganizations(ctx context.Context, q models.Org
 	// Deterministik Sort
 	err := db.Order("created_at desc, id desc").
 		Limit(limit + 1).
+		Preload("Logo").
 		Find(&orgs).Error
 
 	if err != nil {
@@ -116,7 +118,7 @@ func (r *organizationRepo) buildFilterQuery(ctx context.Context, f models.Organi
 	if f.Name != nil {
 		db = db.Where("name ILIKE ?", "%"+*f.Name+"%")
 	}
-	
+
 	// Jika filter Domain diisi, cari di slug atau website
 	if f.Domain != nil {
 		db = db.Where("slug ILIKE ? OR website ILIKE ?", "%"+*f.Domain+"%", "%"+*f.Domain+"%")

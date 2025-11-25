@@ -57,8 +57,8 @@ func (s *organizationService) UpdateProfile(ctx context.Context, id uuid.UUID, r
 		// if existing != nil && existing.ID != id { return error }
 		org.Slug = *req.Slug
 	}
-	if req.LogoURL != nil {
-		org.LogoURL = *req.LogoURL
+	if req.LogoID != nil {
+		org.LogoID = req.LogoID
 	}
 	if req.Website != nil {
 		org.Website = *req.Website
@@ -107,11 +107,17 @@ func (s *organizationService) DeactivateOrganization(ctx context.Context, id uui
 
 // --- HELPER ---
 func (s *organizationService) mapEntityToDetail(org *entity.Organization) *models.OrganizationDetail {
+	logoURL := ""
+	if org.Logo != nil {
+		logoURL = org.Logo.PublicURL
+	}
+
 	return &models.OrganizationDetail{
 		ID:        org.ID,
 		Name:      org.Name,
 		Slug:      org.Slug,
-		LogoURL:   org.LogoURL,
+		LogoID:    org.LogoID,
+		LogoURL:   logoURL,
 		Website:   org.Website,
 		IsActive:  org.IsActive,
 		Settings:  org.Settings,
