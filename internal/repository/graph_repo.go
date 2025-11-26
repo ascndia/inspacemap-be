@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type graphRepo struct {
@@ -89,7 +90,14 @@ func (r *graphRepo) ConnectNodes(ctx context.Context, edge *entity.GraphEdge) er
 	edge.Distance = dist
 	edge.Heading = headingDeg
 
-	return r.db.WithContext(ctx).Create(edge).Error
+	// Prevent duplicate directional edge creation by checking existing row
+	var existing entity.GraphEdge
+	if err := r.db.WithContext(ctx).Where("from_node_id = ? AND to_node_id = ?", edge.FromNodeID, edge.ToNodeID).First(&existing).Error; err == nil {
+		// Edge already exists; treat as idempotent success
+		return nil
+	}
+
+	return r.db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(edge).Error
 }
 
 func (r *graphRepo) DeleteEdge(ctx context.Context, fromID, toID uuid.UUID) error {
@@ -133,5 +141,5 @@ func (r *graphRepo) GetNodeByID(ctx context.Context, id uuid.UUID) (*entity.Grap
 }
 
 func (r *graphRepo) CreateEdge(ctx context.Context, edge *entity.GraphEdge) error {
-	return r.db.WithContext(ctx).Create(edge).Error
+	return r.db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(edge).Error
 }

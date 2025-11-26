@@ -48,9 +48,9 @@ type GraphNode struct {
 
 type GraphEdge struct {
 	BaseEntity
-	FromNodeID uuid.UUID  `gorm:"index;not null"`
+	FromNodeID uuid.UUID  `gorm:"index;not null;uniqueIndex:idx_edge_from_to"`
 	FromNode   *GraphNode `gorm:"foreignKey:FromNodeID"`
-	ToNodeID   uuid.UUID  `gorm:"index;not null"`
+	ToNodeID   uuid.UUID  `gorm:"index;not null;uniqueIndex:idx_edge_from_to"`
 	ToNode     *GraphNode `gorm:"foreignKey:ToNodeID"`
 	Heading    float64
 	Distance   float64
