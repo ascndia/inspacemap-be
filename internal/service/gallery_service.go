@@ -25,14 +25,23 @@ func NewVenueGalleryService(repo repository.VenueGalleryRepository) VenueGallery
 func (s *venueGalleryService) AddGalleryItems(ctx context.Context, req models.AddGalleryVenueItemsRequest) error {
 	var items []entity.VenueGalleryItem
 	for _, item := range req.Items {
-		items = append(items, entity.VenueGalleryItem{
+		galleryItem := entity.VenueGalleryItem{
 			VenueID:      req.VenueID,
 			MediaAssetID: item.MediaAssetID,
 			Caption:      item.Caption,
 			SortOrder:    item.SortOrder,
-			IsVisible:    item.IsVisible,
-			IsFeatured:   item.IsFeatured,
-		})
+		}
+		if item.IsVisible != nil {
+			galleryItem.IsVisible = *item.IsVisible
+		} else {
+			galleryItem.IsVisible = true // Default to visible
+		}
+		if item.IsFeatured != nil {
+			galleryItem.IsFeatured = *item.IsFeatured
+		} else {
+			galleryItem.IsFeatured = false // Default to not featured
+		}
+		items = append(items, galleryItem)
 	}
 	return s.repo.AddVenueItems(ctx, items)
 }
@@ -106,14 +115,19 @@ func (s *areaGalleryService) AddGalleryItems(ctx context.Context, req models.Add
 
 	var items []entity.AreaGalleryItem
 	for _, item := range req.Items {
-		items = append(items, entity.AreaGalleryItem{
+		galleryItem := entity.AreaGalleryItem{
 			AreaID:       req.AreaID,
 			MediaAssetID: item.MediaAssetID,
 			Caption:      item.Caption,
 			SortOrder:    item.SortOrder,
-			IsVisible:    item.IsVisible,
-			// Area tidak punya IsFeatured
-		})
+		}
+		if item.IsVisible != nil {
+			galleryItem.IsVisible = *item.IsVisible
+		} else {
+			galleryItem.IsVisible = true // Default to visible
+		}
+		// Area doesn't have IsFeatured
+		items = append(items, galleryItem)
 	}
 	return s.repo.AddAreaItems(ctx, items)
 }

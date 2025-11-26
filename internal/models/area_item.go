@@ -6,7 +6,7 @@ type AreaGalleryItemPayload struct {
 	MediaAssetID uuid.UUID `json:"media_asset_id" validate:"required"`
 	Caption      string    `json:"caption"`
 	SortOrder    int       `json:"sort_order"`
-	IsVisible    bool      `json:"is_visible"`
+	IsVisible    *bool     `json:"is_visible,omitempty"`
 	IsFeatured   bool      `json:"is_featured"` // Hanya dipakai di Venue, ignored di Area
 }
 
