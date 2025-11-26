@@ -24,10 +24,9 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 func (r *userRepo) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
 	var user entity.User
 	err := r.db.WithContext(ctx).
-		Preload("Memberships").
-		Preload("Memberships.Organization").
-		Preload("Memberships.Role").
-		Preload("Memberships.Role.Permissions").
+		Preload("Organization").
+		Preload("Role").
+		Preload("Role.Permissions").
 		Where("email = ?", email).
 		First(&user).Error
 
@@ -37,13 +36,17 @@ func (r *userRepo) GetByEmail(ctx context.Context, email string) (*entity.User, 
 	return &user, nil
 }
 
+func (r *userRepo) UpdateRole(ctx context.Context, userID, roleID uuid.UUID) error {
+	return r.db.WithContext(ctx).Model(&entity.User{}).
+		Where("id = ?", userID).
+		Update("role_id", roleID).Error
+}
+
 func (r *userRepo) GetByOrganizationID(ctx context.Context, orgID uuid.UUID) ([]entity.User, error) {
 	var users []entity.User
 	err := r.db.WithContext(ctx).
-		Joins("JOIN organization_members om ON om.user_id = users.id").
-		Where("om.organization_id = ?", orgID).
-		Preload("Memberships", "organization_id = ?", orgID).
-		Preload("Memberships.Role").
+		Preload("Role").
+		Where("organization_id = ?", orgID).
 		Find(&users).Error
 	return users, err
 }
@@ -124,12 +127,11 @@ func (r *userRepo) buildFilterQuery(ctx context.Context, f models.UserFilter) *g
 	db := r.db.WithContext(ctx)
 
 	if f.OrganizationID != nil {
-		db = db.Joins("JOIN organization_members om ON om.user_id = users.id").
-			Where("om.organization_id = ?", *f.OrganizationID)
+		db = db.Where("organization_id = ?", *f.OrganizationID)
+	}
 
-		if f.RoleID != nil {
-			db = db.Where("om.role_id = ?", *f.RoleID)
-		}
+	if f.RoleID != nil {
+		db = db.Where("role_id = ?", *f.RoleID)
 	}
 
 	if f.Email != nil {
@@ -140,7 +142,7 @@ func (r *userRepo) buildFilterQuery(ctx context.Context, f models.UserFilter) *g
 		db = db.Where("full_name ILIKE ?", "%"+*f.FullName+"%")
 	}
 
-	db = db.Preload("Memberships").Preload("Memberships.Role")
+	db = db.Preload("Role")
 
 	return db
 }

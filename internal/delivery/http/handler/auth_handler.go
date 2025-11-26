@@ -61,18 +61,3 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	return c.JSON(resp)
 }
-
-// POST /api/v1/auth/invite/accept
-func (h *AuthHandler) AcceptInvite(c *fiber.Ctx) error {
-	var req models.AcceptInviteRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
-	}
-
-	resp, err := h.service.AcceptInvitation(c.Context(), req)
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	return c.JSON(resp)
-}

@@ -18,6 +18,7 @@ type BaseRepository[T any, K comparable] interface {
 type UserRepository interface {
 	GetByOrganizationID(ctx context.Context, orgID uuid.UUID) ([]entity.User, error)
 	GetByEmail(ctx context.Context, email string) (*entity.User, error)
+	UpdateRole(ctx context.Context, userID, roleID uuid.UUID) error
 	FilterUsers(ctx context.Context, filter models.UserFilter) ([]entity.User, error)
 	PagedUsers(ctx context.Context, query models.UserQuery) ([]entity.User, int64, error)
 	CursorUsers(ctx context.Context, query models.UserQueryCursor) ([]entity.User, string, error)
@@ -30,27 +31,6 @@ type OrganizationRepository interface {
 	FilterOrganizations(ctx context.Context, filter models.OrganizationFilter) ([]entity.Organization, error)
 	PagedOrganizations(ctx context.Context, query models.OrganizationQuery) ([]entity.Organization, int64, error)
 	CursorOrganizations(ctx context.Context, query models.OrganizationQueryCursor) ([]entity.Organization, string, error)
-}
-
-type OrganizationMemberRepository interface {
-	BaseRepository[entity.OrganizationMember, uuid.UUID] // ID tabel ini biasanya uint (pivot)
-	AddMember(ctx context.Context, member *entity.OrganizationMember) error
-	RemoveMember(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error
-	UpdateRole(ctx context.Context, orgID uuid.UUID, userID uuid.UUID, roleID uuid.UUID) error
-	GetMember(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) (*entity.OrganizationMember, error)
-	GetMembersByOrg(ctx context.Context, orgID uuid.UUID) ([]entity.OrganizationMember, error)
-	GetMembersByUser(ctx context.Context, userID uuid.UUID) ([]entity.OrganizationMember, error)
-}
-
-type UserInvitationRepository interface {
-	BaseRepository[entity.UserInvitation, uuid.UUID]
-	GetByToken(ctx context.Context, token string) (*entity.UserInvitation, error)
-	GetByOrganizationID(ctx context.Context, orgID uuid.UUID) ([]entity.UserInvitation, error)
-	GetByRoleID(ctx context.Context, roleID uuid.UUID) ([]entity.UserInvitation, error)
-	GetByEmail(ctx context.Context, email string) ([]entity.UserInvitation, error)
-	GetByInviterID(ctx context.Context, inviterID uuid.UUID) ([]entity.UserInvitation, error)
-	GetByStatus(ctx context.Context, orgID uuid.UUID, status string) ([]entity.UserInvitation, error)
-	RevokeInvitation(ctx context.Context, id uuid.UUID) error
 }
 
 type RoleRepository interface {

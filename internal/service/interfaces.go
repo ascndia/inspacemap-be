@@ -12,10 +12,9 @@ import (
 type AuthService interface {
 	Login(ctx context.Context, req models.LoginRequest) (*models.AuthResponse, error)
 	Register(ctx context.Context, req models.RegisterRequest) (*models.AuthResponse, error)
-	AcceptInvitation(ctx context.Context, req models.AcceptInviteRequest) (*models.AuthResponse, error)
 }
 type TeamService interface {
-	InviteMember(ctx context.Context, orgID uuid.UUID, inviterID uuid.UUID, req models.InviteUserRequest) error
+	CreateUser(ctx context.Context, orgID uuid.UUID, req models.CreateUserRequest) error
 	RemoveMember(ctx context.Context, orgID uuid.UUID, targetUserID uuid.UUID) error
 	UpdateMemberRole(ctx context.Context, orgID uuid.UUID, req models.UpdateUserRoleRequest) error
 	GetMembersList(ctx context.Context, orgID uuid.UUID) ([]models.TeamMemberDetail, error)

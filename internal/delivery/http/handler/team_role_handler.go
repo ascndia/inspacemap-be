@@ -50,24 +50,22 @@ func (h *TeamRoleHandler) ListMembers(c *fiber.Ctx) error {
 	return utils.SendSuccess(c, list)
 }
 
-func (h *TeamRoleHandler) InviteMember(c *fiber.Ctx) error {
+func (h *TeamRoleHandler) CreateUser(c *fiber.Ctx) error {
 	orgID, err := uuid.Parse(c.Params("org_id"))
 	if err != nil {
 		return utils.SendError(c, 400, "Invalid Organization ID")
 	}
 
-	inviterID := getUserID(c)
-
-	var req models.InviteUserRequest
+	var req models.CreateUserRequest
 	if err := c.BodyParser(&req); err != nil {
 		return utils.SendError(c, 400, "Invalid JSON")
 	}
 
-	if err := h.teamService.InviteMember(c.Context(), orgID, inviterID, req); err != nil {
+	if err := h.teamService.CreateUser(c.Context(), orgID, req); err != nil {
 		return utils.SendError(c, 500, err.Error())
 	}
 
-	return utils.SendSuccess(c, "Invitation sent successfully")
+	return utils.SendSuccess(c, "User created successfully")
 }
 
 func (h *TeamRoleHandler) UpdateMemberRole(c *fiber.Ctx) error {

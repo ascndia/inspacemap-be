@@ -12,28 +12,24 @@ type LoginRequest struct {
 }
 
 type RegisterRequest struct {
-	FullName string `json:"full_name" validate:"required"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=8"`
+	FullName         string `json:"full_name" validate:"required"`
+	Email            string `json:"email" validate:"required,email"`
+	Password         string `json:"password" validate:"required,min=8"`
 	OrganizationName string `json:"organization_name" validate:"required"`
 }
 
 type AuthResponse struct {
-	AccessToken  string      `json:"access_token"`
-	RefreshToken string      `json:"refresh_token"`
-	ExpiresIn    int         `json:"expires_in"`
-	User         UserDetail  `json:"user"`
+	AccessToken  string     `json:"access_token"`
+	RefreshToken string     `json:"refresh_token"`
+	ExpiresIn    int        `json:"expires_in"`
+	User         UserDetail `json:"user"`
 }
 
-type InviteUserRequest struct {
-	Email  string `json:"email" validate:"required,email"`
-	RoleID uuid.UUID `json:"role_id" validate:"required"`
-}
-
-type AcceptInviteRequest struct {
-	Token    string `json:"token" validate:"required"`
-	Password string `json:"password" validate:"required,min=8"` 
-	FullName string `json:"full_name" validate:"required"`
+type CreateUserRequest struct {
+	FullName string    `json:"full_name" validate:"required"`
+	Email    string    `json:"email" validate:"required,email"`
+	Password string    `json:"password" validate:"required,min=8"`
+	RoleID   uuid.UUID `json:"role_id" validate:"required"`
 }
 
 type CreateApiKeyRequest struct {

@@ -26,7 +26,6 @@ func (c *RouteConfig) Setup() {
 	auth := api.Group("/auth")
 	auth.Post("/login", c.AuthHandler.Login)
 	auth.Post("/register", c.AuthHandler.Register)
-	auth.Post("/invite/accept", c.AuthHandler.AcceptInvite)
 
 	api.Get("/venues/:orgSlug/:venueSlug/manifest", c.VenueHandler.GetManifest)
 
@@ -58,8 +57,8 @@ func (c *RouteConfig) Setup() {
 	venues.Get("/:venue_id/areas", c.AreaHandler.ListAreas)
 
 	orgs := tenant.Group("/orgs/:org_id")
+	orgs.Post("/users", c.TeamRoleHandler.CreateUser)
 	orgs.Get("/members", c.TeamRoleHandler.ListMembers)
-	orgs.Post("/invite", c.TeamRoleHandler.InviteMember)
 	orgs.Patch("/members", c.TeamRoleHandler.UpdateMemberRole)
 	orgs.Delete("/members/:user_id", c.TeamRoleHandler.RemoveMember)
 

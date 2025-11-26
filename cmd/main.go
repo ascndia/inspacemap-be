@@ -46,8 +46,6 @@ func main() {
 	// 2. INIT REPOSITORIES (Data Access Layer)
 	userRepo := repository.NewUserRepository(db)
 	orgRepo := repository.NewOrganizationRepository(db)
-	orgMemberRepo := repository.NewOrganizationMemberRepository(db)
-	invitationRepo := repository.NewInvitationRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
 	permRepo := repository.NewPermissionRepository(db)
 
@@ -89,12 +87,12 @@ func main() {
 	}
 
 	// 4. INIT SERVICES (Business Logic Layer)
-	authService := service.NewAuthService(userRepo, orgRepo, orgMemberRepo, invitationRepo, roleRepo)
+	authService := service.NewAuthService(userRepo, orgRepo, roleRepo)
 	mediaService := service.NewMediaService(mediaRepo, storageProvider, minioBucket, cdnURL)
 	areaService := service.NewAreaService(areaRepo, areaGalleryRepo, graphRepo, floorRepo, revisionRepo)
 	graphService := service.NewGraphService(graphRepo, revisionRepo, floorRepo, venueRepo, mediaRepo, areaRepo, redisClient)
 	venueService := service.NewVenueService(venueRepo, redisClient)
-	teamService := service.NewTeamService(userRepo, invitationRepo, orgMemberRepo, roleRepo)
+	teamService := service.NewTeamService(userRepo, roleRepo)
 	roleService := service.NewRoleService(roleRepo, permRepo)
 	venueGalleryService := service.NewVenueGalleryService(venueGalleryRepo)
 	areaGalleryService := service.NewAreaGalleryService(areaGalleryRepo, areaRepo, revisionRepo)

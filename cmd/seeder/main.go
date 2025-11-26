@@ -173,25 +173,20 @@ func seedDevelopmentData(db *gorm.DB) {
 		db.Where("email = ?", "editor@inspacemap.dev").First(&editorUser)
 		db.Where("email = ?", "viewer@inspacemap.dev").First(&viewerUser)
 
-		members := []struct {
-			user entity.User
-			role entity.Role
-		}{
-			{adminUser, ownerRole},
-			{editorUser, editorRole},
-			{viewerUser, viewerRole},
-		}
+		// Update users with org and role
+		adminUser.OrganizationID = org.ID
+		adminUser.RoleID = ownerRole.ID
+		db.Save(&adminUser)
 
-		for _, m := range members {
-			member := entity.OrganizationMember{
-				OrganizationID: org.ID,
-				UserID:         m.user.ID,
-				RoleID:         m.role.ID,
-			}
-			member.ID = uuid.New()
-			db.Clauses(clause.OnConflict{DoNothing: true}).Create(&member)
-		}
-		log.Printf("Added members to organization: %s", org.Name)
+		editorUser.OrganizationID = org.ID
+		editorUser.RoleID = editorRole.ID
+		db.Save(&editorUser)
+
+		viewerUser.OrganizationID = org.ID
+		viewerUser.RoleID = viewerRole.ID
+		db.Save(&viewerUser)
+
+		log.Printf("Added users to organization: %s", org.Name)
 	}
 
 	// Sample venue

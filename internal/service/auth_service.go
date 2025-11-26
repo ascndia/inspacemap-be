@@ -7,32 +7,25 @@ import (
 	"inspacemap/backend/internal/models"
 	"inspacemap/backend/internal/repository"
 	"inspacemap/backend/pkg/utils"
-	"time"
 
 	"github.com/google/uuid"
 )
 
 type authService struct {
-	userRepo       repository.UserRepository
-	orgRepo        repository.OrganizationRepository
-	orgMemberRepo  repository.OrganizationMemberRepository
-	invitationRepo repository.UserInvitationRepository
-	roleRepo       repository.RoleRepository
+	userRepo repository.UserRepository
+	orgRepo  repository.OrganizationRepository
+	roleRepo repository.RoleRepository
 }
 
 func NewAuthService(
 	userRepo repository.UserRepository,
 	orgRepo repository.OrganizationRepository,
-	orgMemberRepo repository.OrganizationMemberRepository,
-	invitationRepo repository.UserInvitationRepository,
 	roleRepo repository.RoleRepository,
 ) AuthService {
 	return &authService{
-		userRepo:       userRepo,
-		orgRepo:        orgRepo,
-		orgMemberRepo:  orgMemberRepo,
-		invitationRepo: invitationRepo,
-		roleRepo:       roleRepo,
+		userRepo: userRepo,
+		orgRepo:  orgRepo,
+		roleRepo: roleRepo,
 	}
 }
 
@@ -41,12 +34,12 @@ func (s *authService) Login(ctx context.Context, req models.LoginRequest) (*mode
 	if err != nil {
 		return nil, errors.New("invalid email or password")
 	}
-	
+
 	// Check password hash
 	if !utils.CheckPasswordHash(req.Password, user.PasswordHash) {
 		return nil, errors.New("invalid email or password")
 	}
-	
+
 	token, _ := s.generateAuthResponse(user)
 	return token, nil
 }
@@ -76,20 +69,13 @@ func (s *authService) Register(ctx context.Context, req models.RegisterRequest) 
 	}
 
 	newUser := entity.User{
-		FullName:     req.FullName,
-		Email:        req.Email,
-		PasswordHash: hashedPassword,
-	}
-	if err := s.userRepo.Create(ctx, &newUser); err != nil {
-		return nil, err
-	}
-
-	member := entity.OrganizationMember{
+		FullName:       req.FullName,
+		Email:          req.Email,
+		PasswordHash:   hashedPassword,
 		OrganizationID: newOrg.ID,
-		UserID:         newUser.ID,
 		RoleID:         ownerRole.ID,
 	}
-	if err := s.orgMemberRepo.AddMember(ctx, &member); err != nil {
+	if err := s.userRepo.Create(ctx, &newUser); err != nil {
 		return nil, err
 	}
 
@@ -97,120 +83,31 @@ func (s *authService) Register(ctx context.Context, req models.RegisterRequest) 
 	return s.generateAuthResponse(fullUser)
 }
 
-func (s *authService) AcceptInvitation(ctx context.Context, req models.AcceptInviteRequest) (*models.AuthResponse, error) {
-
-	invite, err := s.invitationRepo.GetByToken(ctx, req.Token)
-	if err != nil {
-		return nil, errors.New("invalid or expired invitation token")
-	}
-
-	if invite.ExpiresAt.Before(time.Now()) {
-		return nil, errors.New("invitation expired")
-	}
-
-	var targetUserID uuid.UUID
-	existingUser, _ := s.userRepo.GetByEmail(ctx, invite.Email)
-
-	if existingUser != nil {
-
-		targetUserID = existingUser.ID
-	} else {
-		// Hash password for new user
-		hashedPassword, err := utils.HashPassword(req.Password)
-		if err != nil {
-			return nil, errors.New("failed to hash password")
-		}
-		
-		newUser := entity.User{
-			FullName:        req.FullName,
-			Email:           invite.Email,
-			PasswordHash:    hashedPassword,
-			IsEmailVerified: true,
-		}
-		if err := s.userRepo.Create(ctx, &newUser); err != nil {
-			return nil, err
-		}
-		targetUserID = newUser.ID
-	}
-	member := entity.OrganizationMember{
-		OrganizationID: invite.OrganizationID,
-		UserID:         targetUserID,
-		RoleID:         invite.RoleID,
-	}
-	if err := s.orgMemberRepo.AddMember(ctx, &member); err != nil {
-		return nil, err
-	}
-	fullUser, _ := s.userRepo.GetByEmail(ctx, invite.Email)
-	return s.generateAuthResponse(fullUser)
-}
-
-// func (s *authService) generateAuthResponse(user *entity.User) (*models.AuthResponse, error) {
-// 	var orgs []models.OrgMemberDetail
-// 	for _, m := range user.Memberships {
-// 		orgs = append(orgs, models.OrgMemberDetail{
-// 			OrganizationID: m.OrganizationID,
-// 			Name:           m.Organization.Name,
-// 			Slug:           m.Organization.Slug,
-// 			RoleName:       m.Role.Name,
-// 		})
-// 	}
-
-// 	userDetail := models.UserDetail{
-// 		ID:            user.ID,
-// 		Email:         user.Email,
-// 		FullName:      user.FullName,
-// 		AvatarURL:     user.AvatarURL,
-// 		Organizations: orgs,
-// 	}
-
-// 	token := "mock-jwt-token-xyz"
-
-//	return &models.AuthResponse{
-//		AccessToken: token,
-//		RefreshToken: "mock-refresh-token",
-//		ExpiresIn: 3600,
-//		User: userDetail,
-//	}, nil
 func (s *authService) generateAuthResponse(user *entity.User) (*models.AuthResponse, error) {
-	var orgs []models.OrgMemberDetail
-
-	// Cari Org Default (yang pertama) untuk dijadikan konteks token awal
-	var defaultOrgID uuid.UUID
-	var defaultRoleName string
 	var permissions []string
 
-	for i, m := range user.Memberships {
-		orgs = append(orgs, models.OrgMemberDetail{
-			OrganizationID: m.OrganizationID,
-			Name:           m.Organization.Name,
-			Slug:           m.Organization.Slug,
-			RoleName:       m.Role.Name,
-		})
-
-		// Set default ke index 0
-		if i == 0 {
-			defaultOrgID = m.OrganizationID
-			defaultRoleName = m.Role.Name
-
-			// Ambil Permission Strings dari Role
-			for _, p := range m.Role.Permissions {
-				permissions = append(permissions, p.Key)
-			}
-		}
+	// Get permissions from user's role
+	for _, p := range user.Role.Permissions {
+		permissions = append(permissions, p.Key)
 	}
 
-	// Generate Token yang sudah "dibumbui" Permission
-	token, err := utils.GenerateToken(user.ID, user.Email, defaultOrgID, defaultRoleName, permissions)
+	// Generate Token with user's org and role
+	token, err := utils.GenerateToken(user.ID, user.Email, user.OrganizationID, user.Role.Name, permissions)
 	if err != nil {
 		return nil, err
 	}
 
 	userDetail := models.UserDetail{
-		ID:            user.ID,
-		Email:         user.Email,
-		FullName:      user.FullName,
-		AvatarURL:     user.AvatarURL,
-		Organizations: orgs,
+		ID:        user.ID,
+		Email:     user.Email,
+		FullName:  user.FullName,
+		AvatarURL: user.AvatarURL,
+		Organization: models.OrgMemberDetail{ // Changed from Organizations array to single Organization
+			OrganizationID: user.OrganizationID,
+			Name:           user.Organization.Name,
+			Slug:           user.Organization.Slug,
+			RoleName:       user.Role.Name,
+		},
 	}
 
 	return &models.AuthResponse{

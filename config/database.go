@@ -75,8 +75,6 @@ func ConnectDB() {
 
 	log.Println("Creating relation tables...")
 	err = DB.AutoMigrate(
-		&entity.OrganizationMember{},
-		&entity.UserInvitation{},
 		&entity.ApiKey{},
 		&entity.RolePermission{},
 	)

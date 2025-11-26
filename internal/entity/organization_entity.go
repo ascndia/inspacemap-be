@@ -1,8 +1,6 @@
 package entity
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 )
 
@@ -13,24 +11,12 @@ type Organization struct {
 	LogoID      *uuid.UUID  `gorm:"index"`
 	Logo        *MediaAsset `gorm:"foreignKey:LogoID"`
 	Website     string
-	IsActive    bool                 `gorm:"default:true"`
-	Settings    JSONMap              `gorm:"type:jsonb"`
-	Members     []OrganizationMember `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	Invitations []UserInvitation     `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	IsActive    bool    `gorm:"default:true"`
+	Settings    JSONMap `gorm:"type:jsonb"`
+	Users       []User  `gorm:"foreignKey:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Venues      []Venue
 	MediaAssets []MediaAsset
 	ApiKeys     []ApiKey
-}
-
-type OrganizationMember struct {
-	BaseEntity
-	OrganizationID uuid.UUID    `gorm:"type:uuid;index;not null;uniqueIndex:idx_org_user"`
-	UserID         uuid.UUID    `gorm:"type:uuid;index;not null;uniqueIndex:idx_org_user"`
-	RoleID         uuid.UUID    `gorm:"index;not null"`
-	Role           Role         `gorm:"foreignKey:RoleID"`
-	JoinedAt       time.Time    `gorm:"autoCreateTime"`
-	User           User         `gorm:"foreignKey:UserID"`
-	Organization   Organization `gorm:"foreignKey:OrganizationID"`
 }
 
 type ApiKey struct {
