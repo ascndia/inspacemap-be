@@ -44,8 +44,8 @@ services:
   minio_dev:
     image: minio/minio:latest
     container_name: inspacemap_storage_dev
-    # Command wajib untuk menjalankan server MinIO
-    command: server /data --console-address ":9001"
+    entrypoint: ["/minio-entrypoint.sh"]
+    command: []
     restart: always
     ports:
       - "9002:9000" # API Port (Dipakai Backend) - different port
@@ -55,7 +55,7 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
     volumes:
       - minio_dev_data:/data # Simpan file foto panorama di harddisk host
-      - ./minio-init.sh:/minio-init.sh # Script untuk set bucket policy
+      - ./minio-entrypoint.sh:/minio-entrypoint.sh:ro
 
     # Healthcheck: Memastikan MinIO benar-benar siap menerima request
     healthcheck:
@@ -63,22 +63,6 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
-
-  # Service untuk set bucket policy public setelah MinIO ready
-  minio_setup:
-    image: minio/mc:latest
-    depends_on:
-      minio_dev:
-        condition: service_healthy
-    environment:
-      MINIO_ENDPOINT: http://minio_dev:9000
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-    entrypoint: ["/bin/sh", "-c"]
-    command: |
-      mc alias set myminio http://minio_dev:9000 $$$$MINIO_ACCESS_KEY $$$$MINIO_SECRET_KEY &&
-      mc mb myminio/panoramas --ignore-existing &&
-      mc policy set public myminio/panoramas
 
   # ==========================================
   # 4. REDIS (CACHING) - DEV
