@@ -363,6 +363,7 @@ func (r *revisionRepo) PublishDraft(ctx context.Context, revisionID uuid.UUID, n
 					LabelY:          area.LabelY,
 					Category:        area.Category,
 					CoverImageID:    area.CoverImageID,
+					StartNodeID:     area.StartNodeID,
 				}
 				if err := tx.Create(&newArea).Error; err != nil {
 					return err
