@@ -88,6 +88,7 @@ func main() {
 
 	// 4. INIT SERVICES (Business Logic Layer)
 	authService := service.NewAuthService(userRepo, orgRepo, roleRepo)
+	organizationService := service.NewOrganizationService(orgRepo)
 	mediaService := service.NewMediaService(mediaRepo, storageProvider, minioBucket, cdnURL)
 	areaService := service.NewAreaService(areaRepo, areaGalleryRepo, graphRepo, floorRepo, revisionRepo)
 	graphService := service.NewGraphService(graphRepo, revisionRepo, floorRepo, venueRepo, mediaRepo, areaRepo, redisClient)
@@ -100,6 +101,7 @@ func main() {
 
 	// 5. INIT HANDLERS (HTTP Transport Layer)
 	authHandler := handler.NewAuthHandler(authService)
+	organizationHandler := handler.NewOrganizationHandler(organizationService)
 	teamRoleHandler := handler.NewTeamRoleHandler(teamService, roleService)
 	venueHandler := handler.NewVenueHandler(venueService)
 	venueGalleryHandler := handler.NewVenueGalleryHandler(venueGalleryService) // Implementasi nanti
@@ -133,6 +135,7 @@ func main() {
 		GraphHandler:        graphHandler,
 		MediaHandler:        mediaHandler,
 		AuditHandler:        auditHandler,
+		OrganizationHandler: organizationHandler,
 	}
 	routeConfig.Setup()
 

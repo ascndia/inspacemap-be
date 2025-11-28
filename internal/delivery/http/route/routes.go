@@ -18,6 +18,7 @@ type RouteConfig struct {
 	GraphHandler        *handler.GraphHandler
 	MediaHandler        *handler.MediaHandler
 	AuditHandler        *handler.AuditHandler
+	OrganizationHandler *handler.OrganizationHandler
 }
 
 func (c *RouteConfig) Setup() {
@@ -34,6 +35,11 @@ func (c *RouteConfig) Setup() {
 	protected.Get("/permissions", c.TeamRoleHandler.ListPermissions)
 
 	tenant := protected.Group("/", middleware.TenantGuard())
+
+	// Organization Management
+	tenant.Get("/orgs/:id", c.OrganizationHandler.GetDetail)
+	tenant.Put("/orgs/:id", c.OrganizationHandler.UpdateProfile)
+	tenant.Get("/orgs", c.OrganizationHandler.ListOrganizations)
 
 	media := tenant.Group("/media")
 	media.Post("/upload-init", c.MediaHandler.InitUpload)
