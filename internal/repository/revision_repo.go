@@ -326,6 +326,7 @@ func (r *revisionRepo) PublishDraft(ctx context.Context, revisionID uuid.UUID, n
 
 		// 3. CLONING (Mapping UUID Lama -> UUID Baru)
 		nodeIDMap := make(map[uuid.UUID]uuid.UUID)
+		areaIDMap := make(map[uuid.UUID]uuid.UUID)
 		var newStartNodeID *uuid.UUID
 
 		for _, floor := range draft.Floors {
@@ -346,7 +347,6 @@ func (r *revisionRepo) PublishDraft(ctx context.Context, revisionID uuid.UUID, n
 			}
 
 			// Clone Areas first and keep mapping
-			areaIDMap := make(map[uuid.UUID]uuid.UUID)
 			for _, area := range floor.Areas {
 				newArea := entity.Area{
 					GraphRevisionID: newLiveRev.ID,
@@ -439,6 +439,20 @@ func (r *revisionRepo) PublishDraft(ctx context.Context, revisionID uuid.UUID, n
 							IsActive:   edge.IsActive,
 						}
 						if err := tx.Create(&newEdge).Error; err != nil {
+							return err
+						}
+					}
+				}
+			}
+		}
+
+		// 4.5. Map Area StartNodeID to new node IDs
+		for _, floor := range draft.Floors {
+			for _, area := range floor.Areas {
+				if area.StartNodeID != nil {
+					if newNodeID, ok := nodeIDMap[*area.StartNodeID]; ok {
+						// Update area StartNodeID to new node ID
+						if err := tx.Model(&entity.Area{}).Where("id = ?", areaIDMap[area.ID]).Update("start_node_id", newNodeID).Error; err != nil {
 							return err
 						}
 					}
