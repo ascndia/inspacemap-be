@@ -30,19 +30,20 @@ func NewVenueService(vRepo repository.VenueRepository, redisClient *redis.Client
 // 1. WRITE OPERATIONS
 // =================================================================
 
-func (s *venueService) CreateVenue(ctx context.Context, req models.CreateVenueRequest) (*models.IDResponse, error) {
+func (s *venueService) CreateVenue(ctx context.Context, orgID uuid.UUID, req models.CreateVenueRequest) (*models.IDResponse, error) {
 	venue := entity.Venue{
-		Name:         req.Name,
-		Slug:         req.Slug,
-		Description:  req.Description,
-		Address:      req.Address,
-		City:         req.City,
-		Province:     req.Province,
-		PostalCode:   req.PostalCode,
-		Latitude:     req.Latitude,
-		Longitude:    req.Longitude,
-		CoverImageID: req.CoverImageID,
-		Visibility:   entity.VisibilityPrivate, // Default
+		OrganizationID: orgID,
+		Name:           req.Name,
+		Slug:           req.Slug,
+		Description:    req.Description,
+		Address:        req.Address,
+		City:           req.City,
+		Province:       req.Province,
+		PostalCode:     req.PostalCode,
+		Latitude:       req.Latitude,
+		Longitude:      req.Longitude,
+		CoverImageID:   req.CoverImageID,
+		Visibility:     entity.VisibilityPrivate, // Default
 	}
 
 	if req.Visibility != "" {

@@ -83,7 +83,7 @@ type AreaService interface {
 }
 
 type VenueService interface {
-	CreateVenue(ctx context.Context, req models.CreateVenueRequest) (*models.IDResponse, error)
+	CreateVenue(ctx context.Context, orgID uuid.UUID, req models.CreateVenueRequest) (*models.IDResponse, error)
 	UpdateVenue(ctx context.Context, id uuid.UUID, req models.UpdateVenueRequest) error
 	DeleteVenue(ctx context.Context, id uuid.UUID) error
 	GetVenueDetail(ctx context.Context, id uuid.UUID) (*models.VenueDetail, error)

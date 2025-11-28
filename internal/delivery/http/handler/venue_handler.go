@@ -25,7 +25,13 @@ func (h *VenueHandler) CreateVenue(c *fiber.Ctx) error {
 		return utils.SendError(c, 400, "Invalid JSON")
 	}
 
-	resp, err := h.service.CreateVenue(c.Context(), req)
+	// Get organization ID from context (set by Protected middleware)
+	orgID, ok := c.Locals("org_id").(uuid.UUID)
+	if !ok {
+		return utils.SendError(c, 400, "Organization ID not found in context")
+	}
+
+	resp, err := h.service.CreateVenue(c.Context(), orgID, req)
 	if err != nil {
 		return utils.SendError(c, 500, err.Error())
 	}
@@ -96,6 +102,12 @@ func (h *VenueHandler) ListVenues(c *fiber.Ctx) error {
 	query := models.VenueQuery{
 		Limit:  &defaultLimit,
 		Offset: &defaultOffset,
+	}
+
+	// Get organization ID from context (set by Protected middleware)
+	orgID, ok := c.Locals("org_id").(uuid.UUID)
+	if ok {
+		query.OrganizationID = &orgID
 	}
 
 	// Parse limit
