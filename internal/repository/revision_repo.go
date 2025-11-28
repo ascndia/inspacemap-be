@@ -388,6 +388,12 @@ func (r *revisionRepo) PublishDraft(ctx context.Context, revisionID uuid.UUID, n
 
 			// Clone Nodes (map AreaIDs to new ones)
 			for _, node := range floor.Nodes {
+				// Check if panorama_asset_id exists
+				if err := tx.Model(&entity.MediaAsset{}).Where("id = ?", node.PanoramaAssetID).Select("1").First(&struct{}{}).Error; err != nil {
+					// Panorama asset not found, skip this node
+					continue
+				}
+
 				newNode := entity.GraphNode{
 					FloorID:         newFloor.ID,
 					AreaID:          node.AreaID,
