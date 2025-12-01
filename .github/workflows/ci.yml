@@ -70,7 +70,7 @@ jobs:
           go tool cover -html=integration-coverage.out -o integration-coverage.html
 
       - name: Upload coverage reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage-reports
           path: |
